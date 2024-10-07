@@ -1,0 +1,9 @@
+.page_wrapper {
+  min-height: 100vh;
+}
+
+.contenido_area {
+  flex-grow: 1;
+  max-width: 1300px;
+  margin: 0 auto;
+}
