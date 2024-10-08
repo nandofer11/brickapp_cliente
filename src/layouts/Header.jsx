@@ -16,7 +16,7 @@ const Header = () => {
 
     return (
         <nav className='fix-header navbar-expand-md d-lg-none'>
-            <div className="d-flex align-items-center bg-primary">
+            <div className="d-flex align-items-center bg-primary p-1">
                 <div className="d-lg-block d-none me-5 pe-3">
                     <span>Logotipo</span>
                 </div>

@@ -10,12 +10,6 @@ import Inventario from './components/Pages/Inventario';
 import Reportes from './components/Pages/Reportes';
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-<<<<<<< HEAD
-import Sidebar from './components/Sidebar/Sidebar';
-
-
-
-=======
 import Sidebar from './layouts/Sidebar/Sidebar';
 import FullLayout from './layouts/FullLayout';
 
@@ -53,40 +47,12 @@ import FullLayout from './layouts/FullLayout';
 // ]
 // )
 
->>>>>>> 8f9b63e (actualizacion del sidebar responsive)
 const router = createBrowserRouter([
   {
     path: '/',
     element: <Login />,
   },
   {
-<<<<<<< HEAD
-    path: '/admin/dashboard',
-    element: <Dashboard />,
-  },
-  {
-    path: '/admin/monitor',
-    element: <Monitor/>
-  },
-  {
-    path: '/admin/coccion',
-    element: <Coccion/>
-  },
-  {
-    path: '/admin/trabajadores',
-    element: <Trabajadores/>
-  },
-  {
-    path: '/admin/inventario',
-    element: <Inventario/>
-  },
-  {
-    path: '/admin/reportes',
-    element: <Reportes/>
-  }
-]
-)
-=======
     path: '/admin',
     element: <FullLayout />,
     children: [
@@ -123,18 +89,12 @@ const router = createBrowserRouter([
     ]
   }
 ])
->>>>>>> 8f9b63e (actualizacion del sidebar responsive)
 
 function App() {
   return (
     <div>
-<<<<<<< HEAD
-        <RouterProvider router={router}/>
-      
-=======
       <RouterProvider router={router} />
 
->>>>>>> 8f9b63e (actualizacion del sidebar responsive)
       {/* <div className=''>
         <Sidebar/>
         <div>

@@ -4,35 +4,30 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import * as FaIcons from 'react-icons/fa';
 
 const navigation = [
-    // {
-    //     titulo: "Monitor",
-    //     href: "/admin/monitor",
-    //     icono: ""
-    // },
     {
         titulo: "Inicio",
         href: "/admin/dashboard",
-        icono: ""
+        icono: <FaIcons.FaHome /> 
     },
     {
         titulo: "Cocción",
         href: "/admin/coccion",
-        icono: ""
+        icono: <FaIcons.FaFire /> 
     },
     {
         titulo: "Personal",
         href: "/admin/trabajadores",
-        icono: ""
+        icono: <FaIcons.FaUserCog  /> 
     },
     {
         titulo: "Inventario",
         href: "/admin/inventario",
-        icono: ""
+        icono: <FaIcons.FaBoxes  /> 
     },
     {
         titulo: "Reportes",
         href: "/admin/reportes",
-        icono: ""
+        icono: <FaIcons.FaPrint  /> 
     },
 ]
 
@@ -46,9 +41,9 @@ const Sidebar = () => {
 
     return (
         <div className="sidebar">
-            <div className="d-flex flex-column p-4 text-white bg-primary h-100">
-                <button className="ms-auto text-black d-lg-none" onClick={() => mostrarMenuMovil()}> X </button>
-                <a href="/" className="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+            <div className="d-flex flex-column justify-content-around p-4 text-white bg-primary h-100">
+                <a className="ms-auto text-white d-lg-none" onClick={() => mostrarMenuMovil()}><FaIcons.FaTimes /> </a>
+                <a href="/" className="d-flex align-items-center mb-1 mb-md-0 me-md-auto text-white text-decoration-none">
                     <img className="mb-4" src={logo} alt="brickapp logo" />
                 </a>
                 <hr />
@@ -63,7 +58,7 @@ const Sidebar = () => {
                         <p className='parrafoBtnMonitor'>Cocción en tiempo real</p>
                     </div>
                 </NavLink>
-                <nav className='sidebar_nav'>
+                <nav className=''>
                     <ul>
                         {
                             navigation.map((item, index) => (
@@ -73,7 +68,7 @@ const Sidebar = () => {
                                             ? "active"
                                             : "nav-link"
                                         }>
-                                        <i className={item.icono}></i>
+                                         {item.icono}
                                         <span className='ms-3 d-inline-block'>{item.titulo}</span>
                                     </Link>
                                 </li>

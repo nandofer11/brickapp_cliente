@@ -1,10 +1,5 @@
 import DataTable from 'react-data-table-component';
 import axios from 'axios';
-<<<<<<< HEAD
-import Sidebar from "../Sidebar/Sidebar";
-=======
-import Sidebar from "../../layouts/Sidebar/Sidebar";
->>>>>>> 8f9b63e (actualizacion del sidebar responsive)
 //Icons
 import * as FaIcons from 'react-icons/fa';
 import { useState, useEffect } from 'react';
@@ -41,7 +36,7 @@ const Trabajadores = () => {
     //Función para obtener trabajadores desde endpoint
     const fetchPersonalData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/admin/personal/');
+            const response = await axios.get('http://localhost:3002/api/admin/personal/');
             setPersonalData(response.data); //Guarda datos en el estado
             setLoading(false); //Cambia el estado de loading a false
         } catch (error) {
@@ -50,7 +45,6 @@ const Trabajadores = () => {
         }
     }
 
-    // Función para manejar la sumisión del formulario de trabajador
     // Función para manejar la sumisión del formulario de trabajador
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevenir el envío del formulario
@@ -73,10 +67,10 @@ const Trabajadores = () => {
 
             if (isEditing) {
                 // Actualiza el trabajador
-                response = await axios.put(`http://localhost:3002/admin/personal/${idPersonalSeleccionado}`, trabajadorData);
+                response = await axios.put(`http://localhost:3002/api/admin/personal/${idPersonalSeleccionado}`, trabajadorData);
             } else {
                 // Crea un nuevo trabajador
-                response = await axios.post('http://localhost:3002/admin/personal/', trabajadorData);
+                response = await axios.post('http://localhost:3002/api/admin/personal/', trabajadorData);
             }
 
             if (response.data && response.data.message) {
@@ -86,8 +80,7 @@ const Trabajadores = () => {
                 setShowAlert(true); // Mostrar la alerta
             }
 
-            // Limpiar los campos después de la operación
-            resetForm();
+         
 
             // Actualizar tabla después de la operación
             await fetchPersonalData();
@@ -95,6 +88,9 @@ const Trabajadores = () => {
             // Cerrar el modal primero, luego mostrar el alert
             const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalTrabajador'));
             modal.hide();
+
+               // Limpiar los campos después de la operación
+               resetForm();
 
             // Mostrar el alert después de cerrar el modal
             setTimeout(() => {
@@ -119,8 +115,8 @@ const Trabajadores = () => {
         setEstado(1); // Por defecto activo
         setIsEditing(false); // Variable que indica que estamos en modo de edición
         // Abre el modal
-        const modal = new bootstrap.Modal(document.getElementById('modalTrabajador'));
-        modal.show();
+        // const modal = new bootstrap.Modal(document.getElementById('modalTrabajador'));
+        // modal.show();
     };
 
 
@@ -130,6 +126,14 @@ const Trabajadores = () => {
     };
 
     const handleEdit = (row) => {
+        // Establecer el título del modal y cambiar el estado de edición
+        setModalTitle('Editar trabajador');
+        setIsEditing(true); // Modo edición activado
+
+        // Convertir fecha_ingreso a formato 'YYYY-MM-DD'
+    const fechaFormateada = new Date(row.fecha_ingreso).toISOString().split('T')[0]; 
+
+
         // Cargar datos del trabajador seleccionado en las variables de estado
         setDni(row.dni);
         setNombreCompleto(row.nombre_completo);
@@ -137,13 +141,9 @@ const Trabajadores = () => {
         setDireccion(row.direccion);
         setCelular(row.celular);
         setPagoDia(row.pago_dia);
-        setFechaIngreso(row.fecha_ingreso);
+        setFechaIngreso(fechaFormateada);
         setEstado(row.estado);
         setIdPersonalSeleccionado(row.id_personal);
-
-        // Establecer el título del modal y cambiar el estado de edición
-        setModalTitle('Editar trabajador');
-        setIsEditing(true); // Modo edición activado
 
         // Abre el modal
         const modal = new bootstrap.Modal(document.getElementById('modalTrabajador'));
@@ -250,7 +250,7 @@ const Trabajadores = () => {
             cell: (row) => (
                 <div className="d-flex">
                     {/* Botón de Editar */}
-                    <button className="btn btn-warning btn-sm me-2" onClick={() => handleEdit(row.id_personal)}>
+                    <button className="btn btn-warning btn-sm me-2" onClick={() => handleEdit(row)}>
                         <FaIcons.FaUserEdit /> {/* Icono de editar */}
                     </button>
 
@@ -269,13 +269,9 @@ const Trabajadores = () => {
 
     return (
         <div className='d-flex'>
-<<<<<<< HEAD
-            <Sidebar />
-=======
             {/* <Sidebar /> */}
->>>>>>> 8f9b63e (actualizacion del sidebar responsive)
             <div className='content'>
-                <div className="container">
+                <div className="">
                     {/* Inicio Header Trabajadores */}
                     <div className="d-flex p-2 justify-content-between">
                         <h3 className="">Trabajadores</h3>
@@ -291,20 +287,14 @@ const Trabajadores = () => {
                                     </div>
                                 </div>
                             </form>
-                            <button onClick={handleAddTrabajador} type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTrabajador"><FaIcons.FaUserPlus /> Agregar</button>
+                            <button onClick={handleAddTrabajador} type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTrabajador"><FaIcons.FaUserPlus /> Registrar</button>
                         </div>
 
                     </div>
                     {/* Fin Header Trabajadores */}
 
                     {/* Inicio modal de trabajador */}
-                    <div className="modal fade" id="modalTrabajador" aria-labelledby="tituloModalTrabajador" aria-hidden="true">
-                        {/* Alertas de éxito o error */}
-                        {showAlert && (
-                            <div className={`alert alert-${alertType} mt-2`} role="alert">
-                                {alertMessage}
-                            </div>
-                        )}
+                    <div className="modal fade" id="modalTrabajador" aria-labelledby="tituloModalTrabajador" aria-hidden="true">                     
                         <div className="modal-dialog">
                             <div className="modal-content">
                                 <div className="modal-header bg-primary text-white">
@@ -353,7 +343,7 @@ const Trabajadores = () => {
                                             <div className='col'>
                                                 <div className="mb-3">
                                                     <label htmlFor="celular" className="form-label">Celular</label>
-                                                    <input type="phone" className="form-control" id="celular" value={celular} onChange={(e) => setCelular(e.target.value)} required />
+                                                    <input type="phone" className="form-control" id="celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
                                                 </div>
                                             </div>
                                             <div className='col'>
@@ -391,9 +381,14 @@ const Trabajadores = () => {
 
                             </div>
                         </div>
-
                     </div>
                     {/* Fin modal de trabajador */}
+                       {/* Alertas de éxito o error */}
+                       {showAlert && (
+                            <div className={`alert alert-${alertType} mt-2`} role="alert">
+                                {alertMessage}
+                            </div>
+                        )}
                     {/* Inicio tabla Trabajadores */}
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}

@@ -24,7 +24,7 @@ const Login = () => {
      // Restablecer el mensaje antes de intentar iniciar sesión
   setLoginStatus('');
 
-    Axios.post('http://localhost:3002/login',{
+    Axios.post('http://localhost:3002/api/login',{
       //Valores a enviar a la ruta en el servidor
       LoginUsuario: usuario,
       LoginContraseña: contraseña
