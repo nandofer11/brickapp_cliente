@@ -1,6 +1,6 @@
 @charset "UTF-8";
 .sidebar {
-  height: 100vh;
+  height: 100%;
 }
 .sidebar .btnMonitor {
   display: flex;
