@@ -37,6 +37,8 @@ const Coccion = () => {
         {
             name: 'Cod. Horno',
             selector: row => row.prefijo,
+            maxWidth: '50px'
+
         },
         {
             name: 'Horno',
@@ -58,11 +60,12 @@ const Coccion = () => {
         },
         {
             name: 'Fecha de apagado',
-            selector: row => new Date(row.fecha_apagado).toLocaleDateString('es-ES', {
+            name: 'Fecha de apagado',
+            selector: row => row.fecha_apagado ? new Date(row.fecha_apagado).toLocaleDateString('es-ES', {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric'
-            }),
+            }) : '', // O cualquier texto que desees mostrar
             sortable: true,
         },
         {
@@ -73,12 +76,18 @@ const Coccion = () => {
         {
             name: 'Estado',
             selector: row => row.estado,
+            cell: row => renderEstadoCoccionBadge(row.estado),
             sortable: true,
         },
         {
             name: 'Acciones',
             cell: (row) => (
                 <div className="d-flex">
+                    {/* Botón de Editar */}
+                    <button className="btn btn-light btn-sm me-2" onClick={() => handleViewDetalles(row)}>
+                        <FaIcons.FaEye /> {/* Icono de editar */}
+                    </button>
+
                     {/* Botón de Editar */}
                     <button className="btn btn-warning btn-sm me-2" onClick={() => handleEdit(row)}>
                         <FaIcons.FaEdit /> {/* Icono de editar */}
@@ -170,10 +179,10 @@ const Coccion = () => {
         {
             name: 'Cargo',
             cell: (row) => (
-                <select 
-                className="form-select" 
-                disabled={!hornoSeleccionado || cargosSeleccionados.length>=hornoSeleccionado.cantidad_operarios && !cargosSeleccionados.find(item=>item.personalId === row.id)}
-                onChange={(e)=>handleCargoChange(e, row.id_personal)}
+                <select
+                    className="form-select"
+                    disabled={!hornoSeleccionado || cargosSeleccionados.length >= hornoSeleccionado.cantidad_operarios && !cargosSeleccionados.find(item => item.personalId === row.id)}
+                    onChange={(e) => handleCargoChange(e, row.id_personal)}
                 >
                     <option value="">Sel. un cargo</option>
                     {cargoCoccionData.map((cargo) => (
@@ -188,6 +197,15 @@ const Coccion = () => {
             minWidth: '180px'
         }
     ];
+
+    // Función para mostrar el badge según el estado de la coccion
+    const renderEstadoCoccionBadge = (estado) => {
+        if (estado === 'En curso') {
+            return <span className="badge bg-warning">En curso</span>;
+        } else {
+            return <span className="badge bg-success">Finalizado</span>;
+        }
+    };
 
     //Obtener cocciones
     const fetchCoccionData = async () => {
@@ -253,7 +271,7 @@ const Coccion = () => {
             setTimeout(() => {
                 setShowAlert(false); // Ocultar alerta después de 2 segundos
             }, 2000);
-        }else{
+        } else {
             setShowAlert(false);
         }
     }, [cargosSeleccionados, hornoSeleccionado]);
@@ -320,12 +338,12 @@ const Coccion = () => {
         <div className='d-flex'>
             {/* <Sidebar /> */}
             <div className='content'>
-             {/* Alertas de éxito o error */}
-             {showAlert && (
-                        <div className={`alert alert-${alertType} mt-2 position-fixed top-0 start-50 translate-middle-x`} role="alert"  style={{ zIndex: 1060 }} >
-                            {alertMessage}
-                        </div>
-                    )}
+                {/* Alertas de éxito o error */}
+                {showAlert && (
+                    <div className={`alert alert-${alertType} mt-2 position-fixed top-0 start-50 translate-middle-x`} role="alert" style={{ zIndex: 1060 }} >
+                        {alertMessage}
+                    </div>
+                )}
                 <div className="">
                     {/* Inicio Header cocción */}
                     <div className="d-flex p-2 justify-content-between">
@@ -470,6 +488,12 @@ const Coccion = () => {
                                                             </select>
                                                         </div>
                                                     </div>
+                                                    <div className="col-6">
+                                                        <div className="mb-3">
+                                                            <label htmlFor="inputHumedadInicial" className="form-label">Humedad inicial</label>
+                                                            <input type="number" className="form-control" id="inputHumedadInicial" />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 <div className='row'>
 
@@ -531,7 +555,7 @@ const Coccion = () => {
 
                     </div>
                     {/* Fin modal de coccion */}
-                   
+
                     {/* Inicio tabla cocciones */}
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}
