@@ -131,7 +131,7 @@ const Trabajadores = () => {
         setIsEditing(true); // Modo edición activado
 
         // Convertir fecha_ingreso a formato 'YYYY-MM-DD'
-    const fechaFormateada = new Date(row.fecha_ingreso).toISOString().split('T')[0]; 
+        const fechaFormateada = new Date(row.fecha_ingreso).toISOString().split('T')[0]; 
 
 
         // Cargar datos del trabajador seleccionado en las variables de estado
@@ -400,6 +400,7 @@ const Trabajadores = () => {
                             progressPending={loading}
                             highlightOnHover={true}
                             responsive={true}
+                            noDataComponent="No hay registros de trabajadores disponibles" 
                         />
                     </section>
                     {/* Fin tabla Trabajadores */}
