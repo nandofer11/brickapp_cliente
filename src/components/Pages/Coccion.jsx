@@ -16,6 +16,14 @@ const Coccion = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [modalTitle, setModalTitle] = useState('');
     const [trabajadoresData, setTrabajadoresData] = useState([]);  // Estado para los datos de trabajadores
+    const [idCoccionSeleccionada, setIdCoccionSeleccionada] = useState(null); // Para manejar la cocción seleccionada para editar
+    const [fechaEncendido, setFechaEncendido] = useState('');
+    const [horaInicio, setHoraInicio] = useState('');
+    const [fechaApagado, setFechaApagado] = useState('');
+    const [horaFin, setHoraFin] = useState('');
+    const [humedadInicial, setHumedadInicial] = useState('');
+    const [estado, setEstado] = useState('');
+    const [idUsuario, setIdUsuario] = useState(null);
 
     // HORNOS
     const [hornosData, setHornosData] = useState([]);
@@ -31,14 +39,13 @@ const Coccion = () => {
     const [cargosSeleccionados, setCargosSeleccionados] = useState([]); // para manejar los  cargos seleccionados 
     const [idCargoSeleccionado, setIdCargoSeleccionado] = useState(null);
     const [isEditingCargo, setIsEditingCargo] = useState(false);
-    const [nombreCargo, setNombreCargo] = useState('');
-    const [costoCargo, setCostoCargo] = useState('');
+    const [nombre_cargo, setNombreCargo] = useState('');
+    const [costo_cargo, setCostoCargo] = useState('');
 
     // Estados para las alertas
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
     const [showAlert, setShowAlert] = useState(false);
-
 
     // Configurar columnas para la tabla cocciones
     const columns = [
@@ -134,7 +141,7 @@ const Coccion = () => {
             cell: (row) => (
                 <div className="d-flex">
                     {/* Botón de Editar */}
-                    <button className="btn btn-warning btn-sm me-2" onClick={() => handleEdit(row)}>
+                    <button className="btn btn-warning btn-sm me-2" onClick={() => handleEditHorno(row)}>
                         <FaIcons.FaEdit /> {/* Icono de editar */}
                     </button>
 
@@ -154,11 +161,11 @@ const Coccion = () => {
     const columnsCargosCoccion = [
         {
             name: 'Nombre',
-            selector: row => row.nombre,
+            selector: row => row.nombre_cargo,
         },
         {
             name: 'Costo S/.',
-            selector: row => row.costo,
+            selector: row => row.costo_cargo,
             sortable: true,
         },
         {
@@ -166,12 +173,12 @@ const Coccion = () => {
             cell: (row) => (
                 <div className="d-flex">
                     {/* Botón de Editar */}
-                    <button className="btn btn-warning btn-sm me-2">
+                    <button className="btn btn-warning btn-sm me-2" onClick={() => handleEditCargo(row)}>
                         <FaIcons.FaEdit /> {/* Icono de editar */}
                     </button>
 
                     {/* Botón de Eliminar */}
-                    <button className="btn btn-danger btn-sm">
+                    <button className="btn btn-danger btn-sm" onClick={() => handleEliminar('cargo', row.id_cargo_coccion)}>
                         <FaIcons.FaTrashAlt /> {/* Icono de eliminar */}
                     </button>
                 </div>
@@ -187,20 +194,19 @@ const Coccion = () => {
         {
             name: 'Personal',
             selector: row => row.nombre_completo,
-            sortable: true,
         },
         {
             name: 'Cargo',
             cell: (row) => (
                 <select
                     className="form-select"
-                    disabled={!hornoSeleccionado || cargosSeleccionados.length >= hornoSeleccionado.cantidad_operarios && !cargosSeleccionados.find(item => item.personalId === row.id)}
+                    disabled={!hornoSeleccionado || cargosSeleccionados.length >= hornoSeleccionado.cantidad_operadores && !cargosSeleccionados.find(item => item.personalId === row.id)}
                     onChange={(e) => handleCargoChange(e, row.id_personal)}
                 >
                     <option value="">Sel. un cargo</option>
                     {cargoCoccionData.map((cargo) => (
                         <option key={cargo.id_cargo_coccion} value={cargo.id_cargo_coccion}>
-                            {cargo.nombre}
+                            {cargo.nombre_cargo}
                         </option>
                     ))}
                 </select>
@@ -232,6 +238,100 @@ const Coccion = () => {
         }
     }
 
+    // Función para manejar el guardar/editar una cocción
+    const handleSubmitCoccion = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+
+        // Validar campos obligatorios
+        if (!fechaEncendido || !horaInicio || !hornoSeleccionado) {
+            setAlertMessage('Los campos fecha de encendido, hora de inicio y horno son obligatorios.');
+            setAlertType('danger');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
+
+        // Construir objeto de cocción
+        const coccionData = {
+            fecha_encendido: fechaEncendido,
+            hora_inicio: horaInicio,
+            fecha_apagado: fechaApagado || null,
+            hora_fin: horaFin || null,
+            humedad_inicial: humedadInicial || null,
+            estado: estado || 'En curso',
+            horno_id_horno: hornoSeleccionado.id_horno,
+            usuario_id_usuario: idUsuario || null,
+            operadoresCoccion: cargosSeleccionados.map(cargo => ({
+                cargo_coccion_id_cargo_coccion: cargo.cargo,
+                abastecedor_id_abastecedor: cargo.abastecedor_id || null,
+                material_id_material: cargo.material_id || null,
+                cantidad_usada: cargo.cantidad_usada || null,
+                personal_id_personal: cargo.id_personal,
+            })),
+        };
+
+        // console.log(coccionData);
+        // console.log(cargosSeleccionados);
+
+        try {
+            let response;
+            if (isEditing) {
+                response = await axios.put(`http://localhost:3002/api/admin/coccion/${idCoccionSeleccionada}`, coccionData);
+            } else {
+                response = await axios.post('http://localhost:3002/api/admin/coccion/', coccionData);
+            }
+
+            // Manejar la respuesta según el mensaje del servidor
+        const message = response.data.message || (isEditing ? 'Cocción actualizada con éxito.' : 'Cocción registrada con éxito.');
+
+            // Mensaje de éxito
+            setAlertMessage(message);
+            setAlertType('success');
+            setShowAlert(true);
+
+            // Limpiar formulario
+            setFechaEncendido('');
+            setHoraInicio('');
+            setFechaApagado('');
+            setHoraFin('');
+            setHornoSeleccionado(null);
+            setCargosSeleccionados([]);
+            setEstado('En curso');
+
+            if (isEditing) {
+                setIsEditing(false);
+                setIdCoccionSeleccionada(null);
+            }
+
+            // Actualizar lista de cocciones
+            const updatedCoccionData = await axios.get('http://localhost:3002/api/admin/coccion/');
+            setCoccionlData(updatedCoccionData.data);
+
+        } catch (error) {
+            // Manejar error
+            setAlertMessage(error.response?.data?.error || 'Hubo un problema al registrar la cocción. Inténtalo nuevamente.');
+            setAlertType('danger');
+            setShowAlert(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+    // Función para limpiar el formulario de cocción
+    const resetFormCoccion = () => {
+        setIdHornoSeleccionado('');
+        setFechaEncendido(''); // Limpiar la fecha de encendido
+        setHoraInicio('');     // Limpiar la hora de inicio
+        setFechaApagado('');   // Limpiar la fecha de apagado
+        setHoraFin('');        // Limpiar la hora de fin
+        setEstado('');         // Limpiar el estado de cocción
+        setIsEditing(false);   // Desactivar modo edición
+    };
+
+
     //Obtener hornos
     const fetchHornosnData = async () => {
         try {
@@ -253,7 +353,7 @@ const Coccion = () => {
             nombre,
             cantidad_operadores
         };
-        console.log(hornoData);
+        // console.log(hornoData);
         try {
             let response;
 
@@ -273,10 +373,6 @@ const Coccion = () => {
             // Actualiza tabla después de la operación
             await fetchHornosnData();
 
-            // Cerrar el modal luego mostrar el alert
-            // const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalHornos'));
-            // modal.hide();
-
             // Limpiar los campos despues de la operación
             resetFormHorno();
 
@@ -292,7 +388,7 @@ const Coccion = () => {
         }
     };
 
-    const handleEdit = (row) => {
+    const handleEditHorno = (row) => {
         setIsEditingHorno(true); //Activar modo editar
         console.log(row);
 
@@ -307,7 +403,7 @@ const Coccion = () => {
         setIdHornoSeleccionado('');
         setPrefijo('');
         setNombreHorno('');
-        setCantidadOperadores(0);
+        setCantidadOperadores('');
         setIsEditingHorno(false);
     }
 
@@ -329,8 +425,8 @@ const Coccion = () => {
         e.preventDefault();
 
         const cargoData = {
-            nombreCargo,
-            costoCargo
+            nombre_cargo,
+            costo_cargo
         };
         console.log(cargoData);
         try {
@@ -372,6 +468,17 @@ const Coccion = () => {
         setNombreCargo('');
         setCostoCargo('');
         setIsEditingCargo(false);
+    }
+
+    // Editar cargo coccion
+    const handleEditCargo = (row) => {
+        setIsEditingCargo(true); //Activar modo editar
+        console.log(row);
+
+        // Cargar datos en los inputs
+        setIdCargoSeleccionado(row.id_cargo_coccion);
+        setNombreCargo(row.nombre_cargo);
+        setCostoCargo(row.costo_cargo);
     }
 
     /* FUNCIONES PARA EL PERSONAL */
@@ -429,11 +536,13 @@ const Coccion = () => {
         if (idHorno == "") {
             setHornoSeleccionado(null); // no hay seleccionado, deshabilitar los selectores de cargo
             setCantidadOperadores(0); //Restablacer cantidad de operarios
+            setCargosSeleccionados([]); //Limpiar seleccion de cargos
         } else {
             const hornoSeleccionado = hornosData.find(horno => horno.id_horno === parseInt(idHorno)); // Buscar el horno seleccionado
+            // console.log(hornoSeleccionado);
             if (hornoSeleccionado) {
                 setHornoSeleccionado(hornoSeleccionado); // Actualizar el horno seleccionado
-                setCantidadOperadores(hornoSeleccionado.cantidad_operarios); // Actualizar la cantidad de operarios
+                setCantidadOperadores(hornoSeleccionado.cantidad_operadores); // Actualizar la cantidad de operarios
             }
         }
     };
@@ -444,24 +553,25 @@ const Coccion = () => {
         if (cargoSeleccionado === "") {
             setCargosSeleccionados(prev => prev.filter(item => item.id_personal != id_personal));
             return;
-        }
+        } else {
 
-        // Agregar o actualizar el cargo seleccionado
-        setCargosSeleccionados(prev => {
-            const yaSeleccionado = prev.find(item => item.id_personal === id_personal);
-            if (yaSeleccionado) {
-                // Actualizar el cargo seleccionado para este trabajador
-                return prev.map(item =>
-                    item.id_personal === id_personal ? { id_personal, cargo: cargoSeleccionado } : item
-                );
-            } else {
-                // Agregar nuevo cargo seleccionado
-                return [...prev, { id_personal, cargo: cargoSeleccionado }];
-            }
-        });
+            // Agregar o actualizar el cargo seleccionado
+            setCargosSeleccionados(prev => {
+                const yaSeleccionado = prev.find(item => item.id_personal === id_personal);
+                if (yaSeleccionado) {
+                    // Actualizar el cargo seleccionado para este trabajador
+                    return prev.map(item =>
+                        item.id_personal === id_personal ? { id_personal, cargo: cargoSeleccionado } : item
+                    );
+                } else {
+                    // Agregar nuevo cargo seleccionado
+                    return [...prev, { id_personal, cargo: cargoSeleccionado }];
+                }
+            });
+        }
     }
     // Deshabilitar el botón de guardar si se excede el límite de operarios
-    const guardarDisabled = showAlert || !hornoSeleccionado || cargosSeleccionados.length !== hornoSeleccionado?.cantidad_operarios;
+    const guardarDisabled = showAlert || !hornoSeleccionado || cargosSeleccionados.length !== hornoSeleccionado?.cantidad_operadores;
 
     // Abre el modal y establece la entidad y el ID que se va a eliminar
     const handleEliminar = (entidad, id) => {
@@ -495,7 +605,7 @@ const Coccion = () => {
             if (entidadAEliminar === 'horno') {
                 fetchHornosnData(); // Recargar datos de hornos
             } else if (entidadAEliminar === 'cargo') {
-                fetchCargosData(); // Recargar datos de cargos
+                fetchCargoCoccionData(); // Recargar datos de cargos
             } else if (entidadAEliminar === 'coccion') {
                 fetchCoccionData(); // Recargar datos de cocciones
             }
@@ -545,37 +655,37 @@ const Coccion = () => {
                                         <div className="row">
                                             <div className="col-12 col-md-5">
                                                 <form onSubmit={handleSubmitHorno}>
-                                                    <div class="mb-3">
-                                                        <label for="InputIdHorno" class="form-label">Id.</label>
-                                                        <input type="text" class="form-control" id="InputIdHorno" value={idHornoSeleccionado} onChange={(e) => setIdHornoSeleccionado(e.target.value)} disabled />
+                                                    <div className="mb-3">
+                                                        <label htmlFor="InputIdHorno" className="form-label">Id.</label>
+                                                        <input type="text" className="form-control" id="InputIdHorno" value={idHornoSeleccionado} onChange={(e) => setIdHornoSeleccionado(e.target.value)} disabled />
                                                     </div>
-                                                    <div class="mb-3">
+                                                    <div className="mb-3">
                                                         <div className="row">
                                                             <div className="col-6">
-                                                                <label for="InputCodHorno" class="form-label">Cod. Horno</label>
-                                                                <input type="text" class="form-control" id="InputCodHorno" aria-describedby="codHelp"
+                                                                <label htmlFor="InputCodHorno" className="form-label">Cod. Horno</label>
+                                                                <input type="text" className="form-control" id="InputCodHorno" aria-describedby="codHelp"
                                                                     value={prefijo}
                                                                     onChange={(e) => setPrefijo(e.target.value)} required
                                                                 />
-                                                                <div id="codHelp" class="form-text">Prefijo para identificar un horno.</div>
+                                                                <div id="codHelp" className="form-text">Prefijo para identificar un horno.</div>
                                                             </div>
                                                             <div className="col-6">
-                                                                <label for="InputCantOperadores" class="form-label">Cant. Operadores</label>
-                                                                <input type="number" class="form-control" id="InputCantOperadores"
+                                                                <label htmlFor="InputCantOperadores" className="form-label">Cant. Operadores</label>
+                                                                <input type="number" className="form-control" id="InputCantOperadores"
                                                                     value={cantidad_operadores}
                                                                     onChange={(e) => setCantidadOperadores(e.target.value)} required
                                                                 />
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div class="mb-3">
-                                                        <label for="InputNombreHorno" class="form-label">Nombre de horno</label>
-                                                        <input type="text" class="form-control" id="InputNombreHorno"
+                                                    <div className="mb-3">
+                                                        <label htmlFor="InputNombreHorno" className="form-label">Nombre de horno</label>
+                                                        <input type="text" className="form-control" id="InputNombreHorno"
                                                             value={nombre}
                                                             onChange={(e) => setNombreHorno(e.target.value)} required
                                                         />
                                                     </div>
-                                                    <button type="submit" class="btn btn-primary">{isEditingHorno ? 'Actualizar' : 'Registrar'}</button>
+                                                    <button type="submit" className="btn btn-primary">{isEditingHorno ? 'Actualizar' : 'Registrar'}</button>
 
 
                                                 </form>
@@ -617,25 +727,25 @@ const Coccion = () => {
                                         <div className="row">
                                             <div className="col-12 col-md-6">
                                                 <form onSubmit={handleSubmitCargo}>
-                                                    <div class="mb-3">
-                                                        <label for="InputIdCargoCoccion" class="form-label">Id.</label>
-                                                        <input type="text" class="form-control" id="InputIdCargoCoccion" disabled />
+                                                    <div className="mb-3">
+                                                        <label htmlFor="InputIdCargoCoccion" className="form-label">Id.</label>
+                                                        <input type="text" className="form-control" id="InputIdCargoCoccion" disabled />
                                                     </div>
-                                                    <div class="mb-3">
-                                                        <label for="Nombre" class="form-label">Nombre</label>
-                                                        <input type="text" class="form-control" value={nombreCargo} onChange={(e) => setNombreCargo(e.target.value)} />
-                                                        <div id="" class="form-text">Nombre del cargo del operador en cocción.</div>
+                                                    <div className="mb-3">
+                                                        <label htmlFor="Nombre" className="form-label">Nombre</label>
+                                                        <input type="text" className="form-control" value={nombre_cargo} onChange={(e) => setNombreCargo(e.target.value)} />
+                                                        <div id="" className="form-text">Nombre del cargo del operador en cocción.</div>
                                                     </div>
-                                                    <div class="mb-3">
-                                                        <label for="InputCostoCargoCoccion" class="form-label">Costo S/.</label>
-                                                        <input type="number" class="form-control" value={costoCargo} onChange={(e) => setCostoCargo(e.target.value)} id="InputCostoCargoCoccion" />
+                                                    <div className="mb-3">
+                                                        <label htmlFor="InputCostoCargoCoccion" className="form-label">Costo S/.</label>
+                                                        <input type="number" className="form-control" value={costo_cargo} onChange={(e) => setCostoCargo(e.target.value)} id="InputCostoCargoCoccion" />
                                                     </div>
-                                                    <button type="submit" class="btn btn-primary">{isEditingCargo ? 'Actualizar' : 'Registrar'}</button>
+                                                    <button type="submit" className="btn btn-primary">{isEditingCargo ? 'Actualizar' : 'Registrar'}</button>
                                                 </form>
                                             </div>
                                             <div className="col-12 col-md-6">
                                                 <DataTable
-                                                    title="Lista de hornos"
+                                                    title="Lista de cargos en cocción"
                                                     columns={columnsCargosCoccion}
                                                     data={cargoCoccionData}
                                                     pagination={false}
@@ -668,7 +778,8 @@ const Coccion = () => {
                                 <div className="modal-body">
                                     <div className="row">
                                         <div className="col-12 col-md-6">
-                                            <form>
+                                            <form onSubmit={(e) => handleSubmitCoccion(e)}>
+
                                                 <div className="row">
                                                     <div className="col-6">
                                                         <div className="mb-3">
@@ -695,13 +806,13 @@ const Coccion = () => {
                                                     <div className="col-6">
                                                         <div className="mb-3">
                                                             <label htmlFor="inputFechaEncendido" className="form-label">Fecha de encendido</label>
-                                                            <input type="date" className="form-control" id="inputFechaEncendido" defaultValue={obtenerFechaActual()} required />
+                                                            <input type="date" className="form-control" id="inputFechaEncendido" value={fechaEncendido} onChange={(e) => setFechaEncendido(e.target.value)} required />
                                                         </div>
                                                     </div>
                                                     <div className="col-6">
                                                         <div className="mb-3">
                                                             <label htmlFor="inputHoraInicio" className="form-label">Hora inicio</label>
-                                                            <input type="time" className="form-control" id="inputHoraInicio" defaultValue={obtenerHoraActual()} required />
+                                                            <input type="time" className="form-control" id="inputHoraInicio" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} required />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -722,6 +833,10 @@ const Coccion = () => {
                                                 <div>
 
                                                 </div>
+                                                <div className="modal-footer">
+                                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                    <button type="submit" disabled={guardarDisabled} className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
+                                                </div>
                                             </form>
                                         </div>
                                         <div className="col-12 col-md-6">
@@ -740,10 +855,7 @@ const Coccion = () => {
                                         </div>
                                     </div>
 
-                                    <div className="modal-footer">
-                                        <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                        <button type="submit" disabled={guardarDisabled} className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -766,6 +878,7 @@ const Coccion = () => {
                         />
                     </section>
                     {/* Fin tabla cocciones */}
+
                     {/* Inicio modal confirmación eliminar reutilizable */}
                     <div className={`modal ${mostrarModalEliminar ? 'show' : ''}`} tabIndex="-1" style={{ display: mostrarModalEliminar ? 'block' : 'none' }}>
                         <div className="modal-dialog">

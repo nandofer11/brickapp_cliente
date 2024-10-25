@@ -4,7 +4,16 @@ import axios from 'axios';
 import * as FaIcons from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 
-const Trabajadores = () => {
+const Trabajadores = () => { // Funcion para obtener la fecha
+    const obtenerFechaActual = () => {
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0'); // Obtener día (dd)
+        const month = String(today.getMonth() + 1).padStart(2, '0'); // Obtener mes (mm), sumando 1 porque enero es 0
+        const year = today.getFullYear(); // Obtener año (yyyy)
+
+        return `${day}-${year}-${month}`;
+
+    }
 
     //variables para almacenar el estado de los datos de los trabajadores
     const [personalData, setPersonalData] = useState([]);
@@ -17,7 +26,7 @@ const Trabajadores = () => {
     const [direccion, setDireccion] = useState('');
     const [celular, setCelular] = useState('');
     const [pago_dia, setPagoDia] = useState('');
-    const [fecha_ingreso, setFechaIngreso] = useState('');
+    const [fecha_ingreso, setFechaIngreso] = useState(obtenerFechaActual());
     const [estado, setEstado] = useState(1); // Por defecto activo
 
     // Estados para la alerta
@@ -80,7 +89,7 @@ const Trabajadores = () => {
                 setShowAlert(true); // Mostrar la alerta
             }
 
-         
+
 
             // Actualizar tabla después de la operación
             await fetchPersonalData();
@@ -89,8 +98,8 @@ const Trabajadores = () => {
             const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalTrabajador'));
             modal.hide();
 
-               // Limpiar los campos después de la operación
-               resetForm();
+            // Limpiar los campos después de la operación
+            resetForm();
 
             // Mostrar el alert después de cerrar el modal
             setTimeout(() => {
@@ -111,7 +120,7 @@ const Trabajadores = () => {
         setDireccion('');
         setCelular('');
         setPagoDia('');
-        setFechaIngreso('');
+        setFechaIngreso(obtenerFechaActual());
         setEstado(1); // Por defecto activo
         setIsEditing(false); // Variable que indica que estamos en modo de edición
         // Abre el modal
@@ -131,7 +140,7 @@ const Trabajadores = () => {
         setIsEditing(true); // Modo edición activado
 
         // Convertir fecha_ingreso a formato 'YYYY-MM-DD'
-        const fechaFormateada = new Date(row.fecha_ingreso).toISOString().split('T')[0]; 
+        const fechaFormateada = new Date(row.fecha_ingreso).toISOString().split('T')[0];
 
 
         // Cargar datos del trabajador seleccionado en las variables de estado
@@ -199,6 +208,8 @@ const Trabajadores = () => {
             return <span className="badge bg-danger">Inactivo</span>;
         }
     };
+
+
 
     // Configurar columnas para la tabla
     const columns = [
@@ -294,7 +305,7 @@ const Trabajadores = () => {
                     {/* Fin Header Trabajadores */}
 
                     {/* Inicio modal de trabajador */}
-                    <div className="modal fade" id="modalTrabajador" aria-labelledby="tituloModalTrabajador" aria-hidden="true">                     
+                    <div className="modal fade" id="modalTrabajador" aria-labelledby="tituloModalTrabajador" aria-hidden="true">
                         <div className="modal-dialog">
                             <div className="modal-content">
                                 <div className="modal-header bg-primary text-white">
@@ -310,10 +321,10 @@ const Trabajadores = () => {
                                                     <input type="number" className="form-control" id="dni" value={dni} onChange={(e) => {
                                                         if (e.target.value.length <= 8) {
                                                             setDni(e.target.value)
-                                                        } required
+                                                        }
                                                     }
                                                     }
-                                                    />
+                                                        required />
                                                 </div>
                                             </div>
                                             <div className='col-8'>
@@ -383,12 +394,12 @@ const Trabajadores = () => {
                         </div>
                     </div>
                     {/* Fin modal de trabajador */}
-                       {/* Alertas de éxito o error */}
-                       {showAlert && (
-                            <div className={`alert alert-${alertType} mt-2`} role="alert">
-                                {alertMessage}
-                            </div>
-                        )}
+                    {/* Alertas de éxito o error */}
+                    {showAlert && (
+                        <div className={`alert alert-${alertType} mt-2`} role="alert">
+                            {alertMessage}
+                        </div>
+                    )}
                     {/* Inicio tabla Trabajadores */}
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}
@@ -397,10 +408,16 @@ const Trabajadores = () => {
                             columns={columns}
                             data={personalData}
                             pagination={true}
+                            paginationComponentOptions={{
+                                rowsPerPageText: 'Filas por página', // Cambia el texto de "Rows per page"
+                                rangeSeparatorText: 'de', // Cambia el texto de "of" entre el rango
+                                noRowsPerPage: false, // NO mostrar el selector de filas por página, ponlo en true
+                                selectAllRowsItem: false // Permitir seleccionar todas las filas, ponlo en true
+                            }}
                             progressPending={loading}
                             highlightOnHover={true}
                             responsive={true}
-                            noDataComponent="No hay registros de trabajadores disponibles" 
+                            noDataComponent="No hay registros de trabajadores disponibles"
                         />
                     </section>
                     {/* Fin tabla Trabajadores */}
