@@ -4,6 +4,7 @@ import '../../App.css';
 import Axios from 'axios';
 import video from '../../assets/video2.mp4'
 import logo from '../../assets/images/logo.png'
+import config from '../../config';
 
 import { useNavigate } from 'react-router-dom'
 
