@@ -700,6 +700,7 @@ const Coccion = () => {
                                                     highlightOnHover={true}
                                                     responsive={true}
                                                     noDataComponent="No hay registros de hornos disponibles"
+                                                    persistTableHead={true}
                                                 />
                                             </div>
                                         </div>
@@ -753,6 +754,7 @@ const Coccion = () => {
                                                     highlightOnHover={true}
                                                     responsive={true}
                                                     noDataComponent="No hay registros de cargos disponibles"
+                                                    persistTableHead={true}
                                                 />
                                             </div>
                                         </div>
@@ -851,6 +853,7 @@ const Coccion = () => {
                                                 progressPending={loading} // Mostrar carga si es necesario
                                                 highlightOnHover={true}
                                                 responsive={true}
+                                                persistTableHead={true}
                                             />
                                         </div>
                                     </div>
@@ -875,6 +878,7 @@ const Coccion = () => {
                             highlightOnHover={true}
                             responsive={true}
                             noDataComponent="No hay registros de cocciones disponibles"
+                            persistTableHead={true}
                         />
                     </section>
                     {/* Fin tabla cocciones */}

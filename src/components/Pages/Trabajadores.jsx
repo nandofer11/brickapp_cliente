@@ -418,6 +418,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
                             highlightOnHover={true}
                             responsive={true}
                             noDataComponent="No hay registros de trabajadores disponibles"
+                            persistTableHead={true}
                         />
                     </section>
                     {/* Fin tabla Trabajadores */}

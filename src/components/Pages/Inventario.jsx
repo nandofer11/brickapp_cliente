@@ -535,6 +535,7 @@ const Inventario = () => {
                         highlightOnHover={true}
                         responsive={true}
                         noDataComponent="No hay registros de almacenes disponibles"
+                        persistTableHead={true}
                       />
                     </div>
                   </div>
@@ -602,6 +603,7 @@ const Inventario = () => {
                         highlightOnHover={true}
                         responsive={true}
                         noDataComponent="No hay registros de materiales disponibles"
+                        persistTableHead={true}
                       />
                     </div>
                   </div>
