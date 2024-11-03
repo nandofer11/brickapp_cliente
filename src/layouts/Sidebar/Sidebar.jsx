@@ -1,7 +1,10 @@
+import React, { useContext } from 'react';
 import logo from '../../assets/images/logo2.png';
 import './Sidebar.css';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import * as FaIcons from 'react-icons/fa';
+
+import { AuthContext } from '../../contexts/AuthContext';
 
 const navigation = [
     {
@@ -16,7 +19,7 @@ const navigation = [
     },
     {
         titulo: "Personal",
-        href: "/admin/trabajadores",
+        href: "/admin/personal",
         icono: <FaIcons.FaUserCog  /> 
     },
     {
@@ -31,13 +34,21 @@ const navigation = [
     },
 ]
 
+
 const Sidebar = () => {
+
+    const { logout } = useContext(AuthContext); // Obtener la función logout del AuthContext
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleLogout = () => {
+        logout(); // Llama al método logout del contexto
+        navigate('/login'); // Redirige a la página de login
+    };
 
     const mostrarMenuMovil = () => {
         document.getElementById('sidebar_area').classList.toggle('mostrarSidebar');
     };
-
-    let location = useLocation();
 
     return (
         <div className="sidebar">
@@ -77,7 +88,8 @@ const Sidebar = () => {
                     </ul>
                 </nav>
 
-                <Link to='/' className="btn btn-outline-light mt-5">Cerrar Sesión</Link>
+                <button onClick={handleLogout} className="btn btn-outline-light mt-5">Cerrar Sesión</button>
+
                 <hr/>
                 <div className="footer_sidebar">
                     <p className="fw-lighter">© Brickapp 2024 - Versión 1.0</p>

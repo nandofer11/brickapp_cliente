@@ -11979,7 +11979,7 @@ textarea.form-control-lg {
 }
 
 /**** Inicio Estilos para la pagina de Monitor ****/
-.card-value {
+.card .card-body .card-value {
   font-size: 1.5rem;
   font-weight: bold;
 }

@@ -4,6 +4,8 @@ import axios from 'axios';
 import * as FaIcons from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 
+import config from '../../config';
+
 const Coccion = () => {
     const [loading, setLoading] = useState(true);
     // Estados para manejar el modal de confirmar eliminar
@@ -217,6 +219,16 @@ const Coccion = () => {
         }
     ];
 
+    
+    const token = localStorage.getItem('token'); //obtener token de localstorage
+
+    // Configuración de los headers con el token
+    const configToken = {
+        headers: {
+            'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
+        }
+    };
+
     // Función para mostrar el badge según el estado de la coccion
     const renderEstadoCoccionBadge = (estado) => {
         if (estado === 'En curso') {
@@ -229,7 +241,7 @@ const Coccion = () => {
     //Obtener cocciones
     const fetchCoccionData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/api/admin/coccion/');
+            const response = await axios.get(`${config.apiBaseUrl}coccion/`, configToken);
             setCoccionlData(response.data);
             setLoading(false); //Cambia el estado de loading a false
         } catch (error) {
@@ -277,13 +289,13 @@ const Coccion = () => {
         try {
             let response;
             if (isEditing) {
-                response = await axios.put(`http://localhost:3002/api/admin/coccion/${idCoccionSeleccionada}`, coccionData);
+                response = await axios.put(`${config.apiBaseUrl}coccion/${idCoccionSeleccionada}`, coccionData, configToken);
             } else {
-                response = await axios.post('http://localhost:3002/api/admin/coccion/', coccionData);
+                response = await axios.post(`${config.apiBaseUrl}coccion/`, coccionData, configToken);
             }
 
             // Manejar la respuesta según el mensaje del servidor
-        const message = response.data.message || (isEditing ? 'Cocción actualizada con éxito.' : 'Cocción registrada con éxito.');
+            const message = response.data.message || (isEditing ? 'Cocción actualizada con éxito.' : 'Cocción registrada con éxito.');
 
             // Mensaje de éxito
             setAlertMessage(message);
@@ -305,7 +317,7 @@ const Coccion = () => {
             }
 
             // Actualizar lista de cocciones
-            const updatedCoccionData = await axios.get('http://localhost:3002/api/admin/coccion/');
+            const updatedCoccionData = await axios.get(`${config.apiBaseUrl}coccion/`);
             setCoccionlData(updatedCoccionData.data);
 
         } catch (error) {
@@ -332,10 +344,11 @@ const Coccion = () => {
     };
 
 
-    //Obtener hornos
+    /*** INICIO DE FUNCIONES PARA HORNOS ***/
+    //Obtener todos hornos
     const fetchHornosnData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/api/admin/hornos/');
+            const response = await axios.get(`${config.apiBaseUrl}horno/`, configToken);
             setHornosData(response.data);
             setLoading(false); //Cambia el estado de loading a false
         } catch (error) {
@@ -357,10 +370,11 @@ const Coccion = () => {
         try {
             let response;
 
+
             if (isEditingHorno) {
-                response = await axios.put(`http://localhost:3002/api/admin/hornos/${idHornoSeleccionado}`, hornoData);
+                response = await axios.put(`${config.apiBaseUrl}horno/${idHornoSeleccionado}`, hornoData, configToken);
             } else {
-                response = await axios.post('http://localhost:3002/api/admin/hornos/', hornoData);
+                response = await axios.post(`${config.apiBaseUrl}horno/`, hornoData, configToken);
             }
 
             if (response.data && response.data.message) {
@@ -407,11 +421,13 @@ const Coccion = () => {
         setIsEditingHorno(false);
     }
 
+    /*** FIN DE FUNCIONES PARA HORNOS ***/
+
     /* FUNCIONES PARA CARGO COCCION */
     //Obtener cargo coccion
     const fetchCargoCoccionData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/api/admin/cargoCoccion/');
+            const response = await axios.get(`${config.apiBaseUrl}cargoCoccion/`, configToken);
             setCargoCoccionData(response.data);
             setLoading(false); //Cambia el estado de loading a false
         } catch (error) {
@@ -433,9 +449,9 @@ const Coccion = () => {
             let response;
 
             if (isEditingCargo) {
-                response = await axios.put(`http://localhost:3002/api/admin/cargoCoccion/${idCargoSeleccionado}`, cargoData);
+                response = await axios.put(`${config.apiBaseUrl}cargoCoccion/${idCargoSeleccionado}`, cargoData, configToken);
             } else {
-                response = await axios.post('http://localhost:3002/api/admin/cargoCoccion/', cargoData);
+                response = await axios.post(`${config.apiBaseUrl}cargoCoccion/`, cargoData, configToken);
             }
 
             if (response.data && response.data.message) {
@@ -485,7 +501,7 @@ const Coccion = () => {
     // Función para obtener los trabajadores
     const fetchTrabajadoresData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/api/admin/personal/');
+            const response = await axios.get(`${config.apiBaseUrl}personal/`, configToken);
             //Filtrar trabajadores "activos" (estado 1)
             const trabajadoresActivos = response.data.filter(trabajador => trabajador.estado === 1)
             setTrabajadoresData(trabajadoresActivos); // Guardar los datos en el estado
@@ -592,14 +608,14 @@ const Coccion = () => {
         try {
             let url = '';
             if (entidadAEliminar === 'horno') {
-                url = `http://localhost:3002/api/admin/hornos/${idAEliminar}`;
+                url = `${config.apiBaseUrl}horno/${idAEliminar}`;
             } else if (entidadAEliminar === 'cargo') {
-                url = `http://localhost:3002/api/admin/cargoCoccion/${idAEliminar}`;
+                url = `${config.apiBaseUrl}cargococcion/${idAEliminar}`;
             } else if (entidadAEliminar === 'coccion') {
-                url = `http://localhost:3002/api/admin/coccion/${idAEliminar}`;
+                url = `${config.apiBaseUrl}coccion/${idAEliminar}`;
             }
             // Llamar a la API para eliminar el registro
-            await axios.delete(url);
+            await axios.delete(url, configToken);
 
             // Actualizar los datos después de la eliminación
             if (entidadAEliminar === 'horno') {
@@ -854,6 +870,7 @@ const Coccion = () => {
                                                 highlightOnHover={true}
                                                 responsive={true}
                                                 persistTableHead={true}
+                                                noDataComponent="No hay registros de personal"
                                             />
                                         </div>
                                     </div>

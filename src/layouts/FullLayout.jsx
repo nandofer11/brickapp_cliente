@@ -1,7 +1,7 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
-import Header from '../layouts/Header'
+import Header from './Header'
 import './FullLayout.css'
 
 const FullLayout = () => {

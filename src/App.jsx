@@ -1,108 +1,44 @@
+// src/App.jsx
 import './App.css';
-import Dashboard from './components/Dashboard/Dashboard';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+import Landing from './components/Landing/Landing';
 import Login from './components/Login/Login';
-// Pages
-import Monitor from './components/Pages/Monitor';
+import FullLayout from './layouts/FullLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './contexts/AuthContext';
 import Inicio from './components/Pages/Inicio';
+import Monitor from './components/Pages/Monitor';
 import Coccion from './components/Pages/Coccion';
-import Trabajadores from './components/Pages/Trabajadores';
+import Personal from './components/Pages/Personal';
 import Inventario from './components/Pages/Inventario';
 import Reportes from './components/Pages/Reportes';
 
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Sidebar from './layouts/Sidebar/Sidebar';
-import FullLayout from './layouts/FullLayout';
-
-
-
-// const router = createBrowserRouter([
-//   {
-//     path: '/',
-//     element: <Login />,
-//   },
-//   {
-//     path: '/admin/dashboard',
-//     element: <Dashboard />,
-//   },
-//   {
-//     path: '/admin/monitor',
-//     element: <Monitor/>
-//   },
-//   {
-//     path: '/admin/coccion',
-//     element: <Coccion/>
-//   },
-//   {
-//     path: '/admin/trabajadores',
-//     element: <Trabajadores/>
-//   },
-//   {
-//     path: '/admin/inventario',
-//     element: <Inventario/>
-//   },
-//   {
-//     path: '/admin/reportes',
-//     element: <Reportes/>
-//   }
-// ]
-// )
-
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Login />,
-  },
-  {
-    path: '/admin',
-    element: <FullLayout />,
-    children: [
-      {
-        path: 'dashboard',
-        exact: true,
-        element: <Dashboard />,
-      },
-      {
-        path: 'monitor',
-        exact: true,
-        element: <Monitor />
-      },
-      {
-        path: 'coccion',
-        exact: true,
-        element: <Coccion />
-      },
-      {
-        path: 'trabajadores',
-        exact: true,
-        element: <Trabajadores />
-      },
-      {
-        path: 'inventario',
-        exact: true,
-        element: <Inventario />
-      },
-      {
-        path: 'reportes',
-        exact: true,
-        element: <Reportes />
-      }
-    ]
-  }
-])
-
 function App() {
   return (
-    <div>
-      <RouterProvider router={router} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
 
-      {/* <div className=''>
-        <Sidebar/>
-        <div>
-        </div>
-      </div> */}
-    </div>
-  )
-
+          {/* Rutas protegidas envueltas en el componente FullLayout */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<FullLayout />}>
+              <Route path="inicio" element={<Inicio />} />
+              <Route path="monitor" element={<Monitor />} />
+              <Route path="coccion" element={<Coccion />} />
+              <Route path="personal" element={<Personal />} />
+              <Route path="inventario" element={<Inventario />} />
+              <Route path="reportes" element={<Reportes />} />
+            </Route>
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;

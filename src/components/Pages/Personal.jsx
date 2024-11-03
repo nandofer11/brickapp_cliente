@@ -4,16 +4,9 @@ import axios from 'axios';
 import * as FaIcons from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 
-const Trabajadores = () => { // Funcion para obtener la fecha
-    const obtenerFechaActual = () => {
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0'); // Obtener día (dd)
-        const month = String(today.getMonth() + 1).padStart(2, '0'); // Obtener mes (mm), sumando 1 porque enero es 0
-        const year = today.getFullYear(); // Obtener año (yyyy)
+import config from '../../config';
 
-        return `${day}-${year}-${month}`;
-
-    }
+const Trabajadores = () => {
 
     //variables para almacenar el estado de los datos de los trabajadores
     const [personalData, setPersonalData] = useState([]);
@@ -26,7 +19,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
     const [direccion, setDireccion] = useState('');
     const [celular, setCelular] = useState('');
     const [pago_dia, setPagoDia] = useState('');
-    const [fecha_ingreso, setFechaIngreso] = useState(obtenerFechaActual());
+    const [fecha_ingreso, setFechaIngreso] = useState('');
     const [estado, setEstado] = useState(1); // Por defecto activo
 
     // Estados para la alerta
@@ -41,11 +34,20 @@ const Trabajadores = () => { // Funcion para obtener la fecha
     const [isEditing, setIsEditing] = useState(false);
     const [modalTitle, setModalTitle] = useState('');
 
+    const token = localStorage.getItem('token'); //obtener token de localstorage
+
+    // Configuración de los headers con el token
+    const configToken = {
+        headers: {
+            'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
+        }
+    };
 
     //Función para obtener trabajadores desde endpoint
     const fetchPersonalData = async () => {
         try {
-            const response = await axios.get('http://localhost:3002/api/admin/personal/');
+            const response = await axios.get(`${config.apiBaseUrl}personal/`,  configToken);
+
             setPersonalData(response.data); //Guarda datos en el estado
             setLoading(false); //Cambia el estado de loading a false
         } catch (error) {
@@ -76,10 +78,10 @@ const Trabajadores = () => { // Funcion para obtener la fecha
 
             if (isEditing) {
                 // Actualiza el trabajador
-                response = await axios.put(`http://localhost:3002/api/admin/personal/${idPersonalSeleccionado}`, trabajadorData);
+                response = await axios.put(`${config.apiBaseUrl}personal/${idPersonalSeleccionado}`, trabajadorData, configToken);
             } else {
                 // Crea un nuevo trabajador
-                response = await axios.post('http://localhost:3002/api/admin/personal/', trabajadorData);
+                response = await axios.post(`${config.apiBaseUrl}personal/`, trabajadorData, configToken);
             }
 
             if (response.data && response.data.message) {
@@ -120,7 +122,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
         setDireccion('');
         setCelular('');
         setPagoDia('');
-        setFechaIngreso(obtenerFechaActual());
+        setFechaIngreso();
         setEstado(1); // Por defecto activo
         setIsEditing(false); // Variable que indica que estamos en modo de edición
         // Abre el modal
@@ -136,7 +138,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
 
     const handleEdit = (row) => {
         // Establecer el título del modal y cambiar el estado de edición
-        setModalTitle('Editar trabajador');
+        setModalTitle('Editar personal');
         setIsEditing(true); // Modo edición activado
 
         // Convertir fecha_ingreso a formato 'YYYY-MM-DD'
@@ -169,7 +171,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
         setPagoDia('');
         setFechaIngreso('');
         setEstado(1); // O el valor por defecto que desees
-        setModalTitle('Registrar trabajador'); // Establecer el título del modal
+        setModalTitle('Registrar personal'); // Establecer el título del modal
         setIsEditing(false);
     };
 
@@ -180,7 +182,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
 
     const handleConfirmEliminar = async () => {
         try {
-            await axios.delete(`http://localhost:3002/admin/personal/${idPersonalSeleccionado}`);
+            await axios.delete(`${config.apiBaseUrl}personal/${idPersonalSeleccionado}`, configToken);
             setMostrarModalEliminarTrabajador(false);
             // Mostrar mensaje de éxito
             setAlertMessage('Trabajador eliminado con éxito.');
@@ -198,6 +200,12 @@ const Trabajadores = () => { // Funcion para obtener la fecha
     //useEffect para cargar los datos al montar el componente
     useEffect(() => {
         fetchPersonalData();
+
+        // Obtener la fecha actual cuando se carga el componente
+        const today = new Date();
+        const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+        const formattedDate = localDate.toISOString().split('T')[0]; // Formato yyyy-mm-dd
+        setFechaIngreso(formattedDate);
     }, []);
 
     // Función para mostrar el badge según el estado del personal
@@ -285,7 +293,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
                 <div className="">
                     {/* Inicio Header Trabajadores */}
                     <div className="d-flex p-2 justify-content-between">
-                        <h3 className="">Trabajadores</h3>
+                        <h3 className="">Personal</h3>
                         <div className="d-flex">
 
                             <form className="">
@@ -369,7 +377,9 @@ const Trabajadores = () => { // Funcion para obtener la fecha
                                             <div className="col">
                                                 <div className="mb-3">
                                                     <label htmlFor="fechaIngreso" className="form-label">Fecha de ingreso</label>
-                                                    <input type="date" className="form-control" id="fechaIngreso" value={fecha_ingreso} onChange={(e) => setFechaIngreso(e.target.value)} required />
+                                                    <input type="date" className="form-control" id="fechaIngreso"
+                                                        value={fecha_ingreso}
+                                                        onChange={(e) => setFechaIngreso(e.target.value)} required />
                                                 </div>
                                             </div>
                                             <div className="col">
@@ -404,7 +414,7 @@ const Trabajadores = () => { // Funcion para obtener la fecha
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}
                         <DataTable
-                            title="Lista de personal"
+                            title="Lista de trabajadores"
                             columns={columns}
                             data={personalData}
                             pagination={true}

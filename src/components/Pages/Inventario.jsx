@@ -50,6 +50,15 @@ const Inventario = () => {
   const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
   const [showAlert, setShowAlert] = useState(false);
 
+  const token = localStorage.getItem('token'); //obtener token de localstorage
+
+  // Configuración de los headers con el token
+  const configToken = {
+    headers: {
+      'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
+    }
+  };
+
 
   // Configurar columnas para la tabla de compras de material
   const columnasTablaCompras = [
@@ -91,7 +100,7 @@ const Inventario = () => {
     }
   ];
 
-  // Configurar columnas para la tabla de compras de material
+  // Configurar columnas para la tabla de almacenes
   const columnasTablaAlmacenes = [
     {
       name: 'Cod. Almacén',
@@ -269,7 +278,7 @@ const Inventario = () => {
   //Obtener todos los almacenes
   const fetchAlmacenesData = async () => {
     try {
-      const response = await axios.get(`${config.apiBaseUrl}almacenesMaterial/`);
+      const response = await axios.get(`${config.apiBaseUrl}almacen/`, configToken);
       setAlmacenesData(response.data);
       // setLoading(false); //Cambia el estado de loading a false
       // console.log(response.data);
@@ -292,9 +301,9 @@ const Inventario = () => {
       let response;
 
       if (isEditingAlmacen) {
-        response = await axios.put(`${config.apiBaseUrl}almacenesMaterial/${idAlmacen}`, almacenData);
+        response = await axios.put(`${config.apiBaseUrl}almacen/${idAlmacen}`, almacenData, configToken);
       } else {
-        response = await axios.post(`${config.apiBaseUrl}almacenesMaterial/`, almacenData);
+        response = await axios.post(`${config.apiBaseUrl}almacen/`, almacenData, configToken);
       }
       if (response.data && response.data.message) {
         // Mostrar mensaje de éxito
@@ -333,13 +342,21 @@ const Inventario = () => {
     setCodigoAlmacen(row.codigo_almacen);
     setNombreAlmacen(row.nombre_almacen);
   }
+
+  // Función para resetear los campos del formulario de almacen
+  const resetFormAlmacen = () => {
+    setCodigoAlmacen('');   // Resetear el select de presentación del material
+    setNombreAlmacen(''); // Resetear el campo de nombre del material
+    setIdAlmacen(null);   // Limpiar el ID del material si existe
+    setIsEditingAlmacen(false); // Cambiar el estado para salir del modo edición
+  };
   /*** FIN DE FUNCIONES PARA MANEJAR ALMACEN ***/
 
   /*** INICIO DE FUNCIONES PARA MATERIAL ***/
   //Obtener todos los materiales
   const fetchMaterialData = async () => {
     try {
-      const response = await axios.get(`${config.apiBaseUrl}materiales/`);
+      const response = await axios.get(`${config.apiBaseUrl}material/`, configToken);
       setMaterialesData(response.data);
       // setLoading(false); //Cambia el estado de loading a false
       // console.log(response.data);
@@ -362,9 +379,9 @@ const Inventario = () => {
       let response;
 
       if (isEditingMaterial) {
-        response = await axios.put(`${config.apiBaseUrl}materiales/${idMaterial}`, materialData);
+        response = await axios.put(`${config.apiBaseUrl}material/${idMaterial}`, materialData, configToken);
       } else {
-        response = await axios.post(`${config.apiBaseUrl}materiales/`, materialData);
+        response = await axios.post(`${config.apiBaseUrl}material/`, materialData, configToken);
       }
       if (response.data && response.data.message) {
         // Mostrar mensaje de éxito
@@ -434,19 +451,19 @@ const Inventario = () => {
     try {
       let url = '';
       if (entidadAEliminar === 'almacen') {
-        url = `${config.apiBaseUrl}almacenesMaterial/${idAEliminar}`;
+        url = `${config.apiBaseUrl}almacen/${idAEliminar}`;
       } else if (entidadAEliminar === 'material') {
-        url = `${config.apiBaseUrl}materiales/${idAEliminar}`;
+        url = `${config.apiBaseUrl}material/${idAEliminar}`;
       } else if (entidadAEliminar === 'compra') {
         url = `${config.apiBaseUrl}compraMaterial/${idAEliminar}`;
       }
       // Llamar a la API para eliminar el registro
-      await axios.delete(url);
+      await axios.delete(url, configToken);
 
       // Actualizar los datos después de la eliminación
       if (entidadAEliminar === 'almacen') {
         fetchAlmacenesData(); // Recargar datos
-        // resetFormAlmacen();
+        resetFormAlmacen();
       } else if (entidadAEliminar === 'material') {
         fetchMaterialData();
         resetFormMaterial();
@@ -659,7 +676,22 @@ const Inventario = () => {
                                 <option value="Pendiente">Pendiente</option>
                               </select>
                             </div>
-                            <div className="col-md-6">
+                            <div className="col-md-3">
+                              <label className="form-label">Destino</label>
+                              <div class="form-check">
+                                <input class="form-check-input" type="radio" name="flexRadioDestino" id="flexRadioQuemaDirecta" checked />
+                                <label class="form-check-label" for="flexRadioQuemaDirecta">
+                                  Quema directa
+                                </label>
+                              </div>
+                              <div class="form-check">
+                                <input class="form-check-input" type="radio" name="flexRadioDestino" id="flexRadioParaAlmacen" />
+                                <label class="form-check-label" for="flexRadioParaAlmacen">
+                                  Para almacén
+                                </label>
+                              </div>
+                            </div>
+                            <div className="col-md-3">
                               <label htmlFor="selectAlmacen" className="form-label">Almacén</label>
                               <select className="form-select" id="selectAlmacen">
                                 <option value="">Seleccionar destino</option> {/* Opción por defecto */}
@@ -793,8 +825,6 @@ const Inventario = () => {
                             </tr>
                           </tfoot>
                         </table>
-
-
                       </form>
                     </div>
                   </div>
@@ -821,7 +851,7 @@ const Inventario = () => {
             highlightOnHover={true}
             responsive={true}
             noDataComponent="No hay registros de compras"
-            persistTableHead=  {true}
+            persistTableHead={true}
 
           />
         </section>
