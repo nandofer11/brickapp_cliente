@@ -11997,3 +11997,18 @@ textarea.form-control-lg {
 }
 
 /**** Fin Estilos para la pagina de Monitor ****/
+.search-input {
+  height: 38px;
+  border: 1px solid #dfe1e5;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  background-color: white;
+  box-shadow: none; /* Sin sombra por defecto */
+  transition: box-shadow 0.3s, border-color 0.3s; /* Para transiciones suaves */
+}
+
+.search-input:focus {
+  box-shadow: 0 0 5px red; /* Sombra roja al hacer focus */
+  outline: none; /* Eliminar el outline */
+  border-color: red; /* Opcional: cambiar el color del borde */
+}

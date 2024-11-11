@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DataTable from "react-data-table-component";
 //Icons
 import * as FaIcons from 'react-icons/fa';
 import config from "../../config";
 import axios from "axios";
+
+// import ModalSeleccionarProveedor from "./ModalSeleccionarProveedor";
+
+import '../../App.css'
+
 
 const Inventario = () => {
   // const [loading, setLoading] = useState(true);
@@ -34,16 +39,23 @@ const Inventario = () => {
   const [fechaCompra, setFechaCompra] = useState('');
   const [estadoPago, setEstadoPago] = useState('');
   const [detalleComprasData, setDetalleComprasData] = useState([]);
+  const [destino, setDestino] = useState("Quema");
+
 
   // ESTADOS PARA MANEJAR LA BUSQUEDA Y SELECCION EN EL REGISTRO DE COMPRA
+  const [showProveedorModal, setShowProveedorModal] = useState(false);
+  const [isModalMaterialOpen, setIsModalMaterialOpen] = useState(false);
+
   const [proveedores, setProveedores] = useState([]);
   const [selectedProveedor, setSelectedProveedor] = useState(null);
+  const [selectedMaterial, setSelectedMaterial] = useState(null); // Material seleccionado
   const [inputProveedor, setInputProveedor] = useState('');
+  const [shouldFocusMaterial, setShouldFocusMaterial] = useState(false);
+
   const [filteredMateriales, setFilteredMateriales] = useState([]); // Materiales filtrados según la búsqueda
   const [inputNombreMaterial, setInputNombreMaterial] = useState(''); // Valor del input de búsqueda de materiales
   const [cantidadMaterial, setCantidadMaterial] = useState(""); // Para la cantidad
   const [precioCompra, setPrecioCompra] = useState(""); // Para el precio de compra
-  const [selectedMaterial, setSelectedMaterial] = useState(null); // Material seleccionado
 
   // Estados para las alertas
   const [alertMessage, setAlertMessage] = useState('');
@@ -166,76 +178,91 @@ const Inventario = () => {
     }
   ];
 
-
-  // activar el evento cuando el modal es mostrado
-  useEffect(() => {
-    fetchAlmacenesData();
-    fetchMaterialData();
-
-    // Obtener la fecha actual cuando se carga el componente
-    const today = new Date();
-    const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
-    const formattedDate = localDate.toISOString().split('T')[0]; // Formato yyyy-mm-dd
-    setFechaCompra(formattedDate);
-
-  }, []);
-
   /*** INICIO DE FUNCIONES PARA BÚSQUEDA Y SELECCIÓN ***/
   // Función para buscar proveedores
-  const buscarProveedores = async (nombre) => {
-    const response = await fetch(`${config.apiBaseUrl}proveedores?nombre=${nombre}`);
+  const obtenerProveedores = async (nombre) => {
+    const response = await fetch(`${config.apiBaseUrl}proveedores?nombre=${nombre}`, configToken);
     const data = await response.json();
-    return data;
+    return data.map((proveedor) => ({
+      id: proveedor.id_proveedor,
+      name: proveedor.nombre,
+      tipo_documento: proveedor.tipo_documento,
+      nro_documento: proveedor.nro_documento,
+    }));
   };
 
-  const handleProveedorInputChange = async (e) => {
-    const nombre = e.target.value;
-    setInputProveedor(nombre);
+  const abrirModalProveedor = () => {
+    setIsModalProveedorOpen(true);
+  };
 
-    if (nombre.length > 2) {
-      const resultados = await buscarProveedores(nombre);
-      setProveedores(resultados);
-    } else {
-      setProveedores([]); // Vaciar la lista si el input tiene menos de 3 caracteres
-    }
+  const cerrarModalProveedor = () => {
+    setIsModalProveedorOpen(false);
+  };
+
+  const abrirModalMaterial = () => {
+    setIsModalMaterialOpen(true);
+  };
+
+  const cerrarModalMaterial = () => {
+    setIsModalMaterialOpen(false);
   };
 
   const handleSelectProveedor = (proveedor) => {
     setSelectedProveedor(proveedor);
-    setInputProveedor(proveedor.nombre); // Rellenar el input con el nombre del proveedor
-    setProveedores([]); // Ocultar la lista al seleccionar un proveedor
-
-    // Rellenar los campos del proveedor seleccionado
-    document.getElementById('inputTipoDocumentoProveedor').value = proveedor.tipo_documento;
-    document.getElementById('inputNroDocumentoProveedor').value = proveedor.nro_documento;
-    document.getElementById('inputProveedor').value = proveedor.nombre;
+    setInputProveedor(proveedor.name);
+    cerrarModalProveedor(); // Cierra el modal de proveedor
   };
 
-  // Función que se ejecuta cuando el usuario escribe en el input
-  const handleMaterialInputChange = (e) => {
-    const nombre = e.target.value;
-    setInputNombreMaterial(nombre); // Actualizar el valor del input
+  const handleSelectMaterial = (material) => {
+    setSelectedMaterial(material);
+    setInputNombreMaterial(material.name);
+    setShouldFocusMaterial(true); // Foco al campo cantidad
+    cerrarModalMaterial(); // Cierra el modal de material
+  };
 
-    if (nombre.length > 0) {
-      // Filtrar los materiales por el nombre ingresado
-      const resultados = materialesData.filter((material) =>
-        material.nombre.toLowerCase().includes(nombre.toLowerCase())
-      );
-      setFilteredMateriales(resultados); // Guardar los materiales filtrados
+  const inputNombreMaterialRef = useRef(null);
+
+  // Función para manejar la búsqueda y cargar los resultados en tiempo real
+  const handleSearch = async (nombre) => {
+    setInputProveedor(nombre); // Actualiza el valor del input en tiempo real
+
+    if (nombre) {
+      const proveedoresList = await obtenerProveedores(nombre);
+      setProveedores(proveedoresList);
     } else {
-      setFilteredMateriales([]); // Limpiar la lista si el input tiene menos de 3 caracteres
+      // Si el campo está vacío, restablece la lista de proveedores
+      setProveedores([]);
     }
   };
 
-  // Función para seleccionar un material de la lista
-  const handleSelectMaterial = (material) => {
-    setSelectedMaterial(material); // Guardar el material seleccionado
-    setInputNombreMaterial(material.nombre); // Rellenar el input con el nombre del material seleccionado
-    setFilteredMateriales([]); // Ocultar la lista de materiales
+  // Función para manejar la selección de un proveedor y cargar los datos en los campos
+  const handleSelect = (item) => {
+    setSelectedProveedor(item);
+    setInputProveedor(item.name);
 
-    // Hacer focus en el campo de cantidad
-    document.getElementById('inputCantidadMaterial').focus();
   };
+
+  const handleSearchMaterial = async (nombre) => {
+    if (nombre) {
+      const materialesList = await obtenerMateriales(nombre);
+      setFilteredMateriales(materialesList);
+    }
+  };
+
+
+  const resentFormCompra = () => {
+    setFechaCompra('');
+    setEstadoPago('');
+    setSelectedProveedor(null);
+    setNombreMaterial('');
+    setCantidadMaterial('');
+    setPrecioCompra('');
+  }
+
+  const handleRadioChange = (e) => {
+    setDestino(e.target.value);
+  }
+
 
   // función que se encargue de agregar los datos de la compra al estado detalleComprasData
   const handleAgregarMaterial = (e) => {
@@ -482,6 +509,19 @@ const Inventario = () => {
   /*** FIN DE FUNCIONES PARA MANEJAR EL MODAL DE ELIMINAR ***/
 
 
+  // activar el evento cuando el modal es mostrado
+  useEffect(() => {
+    fetchAlmacenesData();
+    fetchMaterialData();
+
+    // Obtener la fecha actual cuando se carga el componente
+    const today = new Date();
+    const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+    const formattedDate = localDate.toISOString().split('T')[0]; // Formato yyyy-mm-dd
+    setFechaCompra(formattedDate);
+
+  }, []);
+
   return (
     <div className='d-flex'>
       {/* <Sidebar/> */}
@@ -679,13 +719,29 @@ const Inventario = () => {
                             <div className="col-md-3">
                               <label className="form-label">Destino</label>
                               <div class="form-check">
-                                <input class="form-check-input" type="radio" name="flexRadioDestino" id="flexRadioQuemaDirecta" checked />
+                                <input
+                                  class="form-check-input"
+                                  type="radio"
+                                  name="flexRadioDestino"
+                                  id="flexRadioQuemaDirecta"
+                                  value="Quema"
+                                  checked={destino === "Quema"}
+                                  onChange={handleRadioChange}
+                                />
                                 <label class="form-check-label" for="flexRadioQuemaDirecta">
                                   Quema directa
                                 </label>
                               </div>
                               <div class="form-check">
-                                <input class="form-check-input" type="radio" name="flexRadioDestino" id="flexRadioParaAlmacen" />
+                                <input
+                                  class="form-check-input"
+                                  type="radio"
+                                  name="flexRadioDestino"
+                                  id="flexRadioParaAlmacen"
+                                  value={"Almacen"}
+                                  checked={destino === "Almacen"}
+                                  onChange={handleRadioChange}
+                                />
                                 <label class="form-check-label" for="flexRadioParaAlmacen">
                                   Para almacén
                                 </label>
@@ -693,9 +749,12 @@ const Inventario = () => {
                             </div>
                             <div className="col-md-3">
                               <label htmlFor="selectAlmacen" className="form-label">Almacén</label>
-                              <select className="form-select" id="selectAlmacen">
+                              <select
+                                className="form-select"
+                                id="selectAlmacen"
+                                disabled={destino === "Quema"}>
                                 <option value="">Seleccionar destino</option> {/* Opción por defecto */}
-                                <option value="Quema directa">Quema directa</option> {/* Opción adicional */}
+                                <option value="Quema">Quema directa</option> {/* Opción adicional */}
 
                                 {/* Mapea los almacenes obtenidos */}
                                 {almacenesData.map((almacen) => (
@@ -709,43 +768,44 @@ const Inventario = () => {
                           <div className="row mb-3">
                             <div className="col-12 col-md-3">
                               <label for="" className="form-label">Tipo documento</label>
-                              <input disabled className="form-control" type="text" name="inputTipoDocumentoProveedor" id="inputTipoDocumentoProveedor" />
+                              <input
+                                disabled
+                                className="form-control"
+                                type="text"
+                                name="inputTipoDocumentoProveedor"
+                                id="inputTipoDocumentoProveedor"
+                                value={selectedProveedor?.tipo_documento || ""}
+                              />
                             </div>
                             <div className="col-12 col-md-3">
                               <label for="" className="form-label">Nro. documento</label>
-                              <input disabled className="form-control" type="number" name="inputNroDocumentoProveedor" id="inputNroDocumentoProveedor" />
+                              <input
+                                disabled
+                                className="form-control"
+                                type="number"
+                                name="inputNroDocumentoProveedor"
+                                id="inputNroDocumentoProveedor"
+                                value={selectedProveedor?.nro_documento || ""}
+                              />
 
                             </div>
                             <div className="col-12 col-md-6">
                               <label for="" className="form-label">Proveedor</label>
-                              <div className="d-flex gap-2">
+                              <div className="d-flex w-100 gap-2">
+                                <div style={{ flex: 1 }}>
                                 <input
-                                  className="form-control"
-                                  type="text"
-                                  name="inputProveedor"
-                                  id="inputProveedor"
-                                  value={inputProveedor}
-                                  onChange={handleProveedorInputChange}
-                                  onFocus={() => proveedores.length > 0 && setProveedores(proveedores)} // Mostrar lista al enfocar si hay resultados
-                                />
+              type="text"
+              className="form-control"
+              id="proveedor"
+              value={selectedProveedor ? selectedProveedor.name : ""}
+              readOnly
+              onClick={() => setShowProveedorModal(true)}
+            />
+                                </div>
+
                                 <button className="btn btn-primary">
                                   <FaIcons.FaUserPlus />
                                 </button>
-
-                                {/* Lista de proveedores */}
-                                {proveedores.length > 0 && (
-                                  <ul className="list-group position-absolute top-100 w-100 z-index-1">
-                                    {proveedores.map((proveedor) => (
-                                      <li
-                                        key={proveedor.id_proveedor}
-                                        className="list-group-item"
-                                        onClick={() => handleSelectProveedor(proveedor)}
-                                      >
-                                        {proveedor.nombre}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
 
                               </div>
                             </div>
@@ -754,32 +814,22 @@ const Inventario = () => {
 
                             <div className="col-md-6">
                               <label htmlFor="nombreMaterial" className="form-label">Material</label>
-                              <div className="d-flex gap-2">
 
-                                <input
-                                  className="form-control"
-                                  type="text"
-                                  name="inputNombreMaterial"
-                                  id="inputNombreMaterial"
-                                  value={inputNombreMaterial}
-                                  onChange={handleMaterialInputChange}
-                                  placeholder="Buscar material"
-                                />
+                              <div className="d-flex w-100 gap-2">
+                                <div style={{ flex: 1 }}>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Nombre del material"
+                                    value={selectedMaterial?.name || ''}
+                                    onClick={abrirModalMaterial}
+                                  />
+                                </div>
 
-                                {/* Lista de materiales filtrados */}
-                                {filteredMateriales.length > 0 && (
-                                  <ul className="list-group position-absolute top-100 w-100 z-index-1">
-                                    {filteredMateriales.map((material) => (
-                                      <li
-                                        key={material.id_material}
-                                        className="list-group-item"
-                                        onClick={() => handleSelectMaterial(material)}
-                                      >
-                                        {material.nombre}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
+                                <button className="btn btn-primary">
+                                  <FaIcons.FaPlus />
+                                </button>
+
                               </div>
                             </div>
                             <div className="col-md-2">
@@ -838,6 +888,45 @@ const Inventario = () => {
           </div>
         </div>
         {/* Fin modal de compras  */}
+
+        {/* Modal para seleccionar proveedor */}
+      {/* <ModalSeleccionarProveedor
+        show={showProveedorModal}
+        onHide={() => setShowProveedorModal(false)}
+        onSelectProveedor={handleSelectProveedor}
+      /> */}
+
+        {isModalMaterialOpen && (
+          <div className="modal show" tabIndex="-1" style={{ display: 'block' }}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Seleccionar Material</h5>
+                  <button type="button" className="btn-close" onClick={cerrarModalMaterial}></button>
+                </div>
+                <div className="modal-body">
+                  <ul className="list-group">
+                    {filteredMateriales.map((material) => (
+                      <li
+                        key={material.id}
+                        className="list-group-item"
+                        onClick={() => {
+                          setSelectedMaterial(material);
+                          cerrarModalMaterial();
+                          setShouldFocusMaterial(true); // Foco al campo cantidad
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {material.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Inicio tabla compras */}
         <section className="mt-3">

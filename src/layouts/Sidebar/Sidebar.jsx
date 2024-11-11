@@ -9,7 +9,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 const navigation = [
     {
         titulo: "Inicio",
-        href: "/admin/dashboard",
+        href: "/admin/inicio",
         icono: <FaIcons.FaHome /> 
     },
     {

@@ -7,6 +7,17 @@ import { useState, useEffect } from 'react';
 import config from '../../config';
 
 const Coccion = () => {
+
+    const token = localStorage.getItem('token'); //obtener token de localstorage
+
+    // Configuración de los headers con el token
+    const configToken = {
+        headers: {
+            'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
+        }
+    };
+
+
     const [loading, setLoading] = useState(true);
     // Estados para manejar el modal de confirmar eliminar
     const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
@@ -16,9 +27,8 @@ const Coccion = () => {
     //COCCION
     const [coccionData, setCoccionlData] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
-    const [modalTitle, setModalTitle] = useState('');
     const [trabajadoresData, setTrabajadoresData] = useState([]);  // Estado para los datos de trabajadores
-    const [idCoccionSeleccionada, setIdCoccionSeleccionada] = useState(null); // Para manejar la cocción seleccionada para editar
+    const [idCoccionSeleccionada, setIdCoccionSeleccionada] = useState(null); // cocción seleccionada para editar
     const [fechaEncendido, setFechaEncendido] = useState('');
     const [horaInicio, setHoraInicio] = useState('');
     const [fechaApagado, setFechaApagado] = useState('');
@@ -34,7 +44,8 @@ const Coccion = () => {
     const [idHornoSeleccionado, setIdHornoSeleccionado] = useState(null);
     const [prefijo, setPrefijo] = useState('');
     const [nombre, setNombreHorno] = useState('');
-    const [cantidad_operadores, setCantidadOperadores] = useState(0);
+    const [cantidad_humeadores, setCantidadHumeadores] = useState(0);
+    const [cantidad_quemadores, setCantidadQuemadores] = useState(0);
 
     // CARGOS COCCION
     const [cargoCoccionData, setCargoCoccionData] = useState([]);
@@ -48,6 +59,14 @@ const Coccion = () => {
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
     const [showAlert, setShowAlert] = useState(false);
+
+    const [mostrarModalHumeador, setMostrarModalHumeador] = useState(false);
+    const [trabajadoresSeleccionadosHumeador, setTrabajadoresSeleccionadosHumeador] = useState([]);
+    const [monstrarModalQuemadores, setMostrarModalQuemadores] = useState(false);
+    const [trabajadoresSeleccionadosQuemadores, setTrabajadoresSeleccionadosQuemadores] = useState([]);
+
+    const [showModalCoccionDetalles, setShowModalCoccionDetalles] = useState(false);
+    const [coccionDetalles, setCoccionDetalles] = useState(null);
 
     // Configurar columnas para la tabla cocciones
     const columns = [
@@ -83,6 +102,7 @@ const Coccion = () => {
                 year: 'numeric'
             }) : '', // O cualquier texto que desees mostrar
             sortable: true,
+            // maxWidth: '30px'
         },
         {
             name: 'Hora de fin',
@@ -99,8 +119,8 @@ const Coccion = () => {
             name: 'Acciones',
             cell: (row) => (
                 <div className="d-flex">
-                    {/* Botón de Editar */}
-                    <button className="btn btn-light btn-sm me-2" onClick={() => handleViewDetalles(row)}>
+                    {/* Botón de ver detalle */}
+                    <button className="btn btn-light btn-sm me-2" onClick={() => fetchDetallesCoccion(row.id_coccion)}>
                         <FaIcons.FaEye /> {/* Icono de editar */}
                     </button>
 
@@ -110,7 +130,7 @@ const Coccion = () => {
                     </button>
 
                     {/* Botón de Eliminar */}
-                    <button className="btn btn-danger btn-sm">
+                    <button className="btn btn-danger btn-sm" onClick={() => handleEliminar('coccion', row.id_coccion)}>
                         <FaIcons.FaTrashAlt /> {/* Icono de eliminar */}
                     </button>
                 </div>
@@ -124,9 +144,9 @@ const Coccion = () => {
     // Configurar columnas para la tabla hornos
     const columnsHornos = [
         {
-            name: 'Cod. Horno',
+            name: 'Prefijo',
             selector: row => row.prefijo,
-            maxWidth: '2s0px'
+            maxWidth: '10px'
         },
         {
             name: 'Nombre horno',
@@ -134,8 +154,13 @@ const Coccion = () => {
             sortable: true,
         },
         {
-            name: 'Cant. Operadores',
-            selector: row => row.cantidad_operadores,
+            name: 'Humeadores',
+            selector: row => row.cantidad_humeadores,
+            maxWidth: '20px'
+        },
+        {
+            name: 'Quemadores',
+            selector: row => row.cantidad_quemadores,
             maxWidth: '20px'
         },
         {
@@ -191,43 +216,6 @@ const Coccion = () => {
         }
     ];
 
-    // Configurar columnas para la tabla de trabajadores
-    const columnsTrabajadores = [
-        {
-            name: 'Personal',
-            selector: row => row.nombre_completo,
-        },
-        {
-            name: 'Cargo',
-            cell: (row) => (
-                <select
-                    className="form-select"
-                    disabled={!hornoSeleccionado || cargosSeleccionados.length >= hornoSeleccionado.cantidad_operadores && !cargosSeleccionados.find(item => item.personalId === row.id)}
-                    onChange={(e) => handleCargoChange(e, row.id_personal)}
-                >
-                    <option value="">Sel. un cargo</option>
-                    {cargoCoccionData.map((cargo) => (
-                        <option key={cargo.id_cargo_coccion} value={cargo.id_cargo_coccion}>
-                            {cargo.nombre_cargo}
-                        </option>
-                    ))}
-                </select>
-            ),
-            ignoreRowClick: true,
-            button: true,
-            minWidth: '180px'
-        }
-    ];
-
-    
-    const token = localStorage.getItem('token'); //obtener token de localstorage
-
-    // Configuración de los headers con el token
-    const configToken = {
-        headers: {
-            'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
-        }
-    };
 
     // Función para mostrar el badge según el estado de la coccion
     const renderEstadoCoccionBadge = (estado) => {
@@ -250,43 +238,184 @@ const Coccion = () => {
         }
     }
 
+    // Función para abrir el modal
+    const abrirModalHumeador = () => {
+        setMostrarModalHumeador(true);
+    };
+
+    // Función para cerrar el modal
+    const cerrarModal = () => {
+        setMostrarModalHumeador(false);
+    };
+
+    // Manejar la selección de humeador y agregarlo a la lista de humeador
+    const manejarSeleccionHumeador = (trabajador) => {
+        if (trabajadoresSeleccionadosHumeador.length >= cantidad_humeadores) {
+            setAlertMessage(`Ya se ha alcanzado el límite de ${cantidad_humeadores} humeadores.`);
+            setAlertType('danger');
+            setShowAlert(true);
+
+            setTimeout(() => {
+                setShowAlert(false);
+            }, 3000);
+        } else {
+            // Agregar el trabajador seleccionado a la lista
+            setTrabajadoresSeleccionadosHumeador((prevSeleccionados) => [
+                ...prevSeleccionados,
+                trabajador
+            ]);
+
+            // Cerrar el modal si se alcanza la cantidad máxima permitida
+            if (trabajadoresSeleccionadosHumeador.length + 1 >= cantidad_humeadores) {
+                setMostrarModalHumeador(false);
+            }
+        }
+    };
+
+    // Función para eliminar un humeador de la lista
+    const manejarEliminarHumeador = (id) => {
+        setTrabajadoresSeleccionadosHumeador((prev) => prev.filter(trabajador => trabajador.id_personal !== id));
+    };
+
+    // Función para eliminar un quemador de la lista
+    const manejarEliminarQuemador = (id) => {
+        setTrabajadoresSeleccionadosQuemadores((prev) => prev.filter(trabajador => trabajador.id_personal !== id));
+    };
+
+    // Función para abrir el modal
+    const abrirModalQuemadores = () => {
+        setMostrarModalQuemadores(true);
+    };
+
+    // Función para cerrar el modal
+    const cerrarModalQuemadores = () => {
+        setMostrarModalQuemadores(false);
+    };
+
+    const manejarSeleccionQuemadores = (trabajador) => {
+        // Verificar si el trabajador ya está en la lista
+        const existe = trabajadoresSeleccionadosQuemadores.some(trabajadorSeleccionado => trabajadorSeleccionado.id_personal === trabajador.id_personal);
+
+        if (existe) {
+            // Si el trabajador ya está en la lista, mostrar un mensaje
+            setAlertMessage(`El operador ${trabajador.nombre_completo} ya ha sido seleccionado.`);
+            setAlertType('warning');
+            setShowAlert(true);
+
+            setTimeout(() => {
+                setShowAlert(false);
+            }, 3000);
+            return; // Salir de la función si ya existe
+        }
+
+        // Verificar si se alcanzó el límite de quemadores
+        if (trabajadoresSeleccionadosQuemadores.length >= cantidad_quemadores) {
+            setAlertMessage(`Ya se ha alcanzado el límite de ${cantidad_quemadores} quemadores.`);
+            setAlertType('danger');
+            setShowAlert(true);
+
+            setTimeout(() => {
+                setShowAlert(false);
+            }, 3000);
+            return; // Salir de la función si se alcanzó el límite
+        }
+
+        // Agregar el trabajador seleccionado a la lista
+        setTrabajadoresSeleccionadosQuemadores((prevSeleccionados) => [
+            ...prevSeleccionados,
+            trabajador
+        ]);
+
+        // Cerrar el modal si se alcanza la cantidad máxima permitida
+        if (trabajadoresSeleccionadosQuemadores.length + 1 >= cantidad_quemadores) {
+            setMostrarModalQuemadores(false);
+        }
+    };
+
     // Función para manejar el guardar/editar una cocción
     const handleSubmitCoccion = async (event) => {
         event.preventDefault();
         setLoading(true);
 
         // Validar campos obligatorios
-        if (!fechaEncendido || !horaInicio || !hornoSeleccionado) {
-            setAlertMessage('Los campos fecha de encendido, hora de inicio y horno son obligatorios.');
+        if (!hornoSeleccionado) {
+            setAlertMessage('Debes seleccionar un horno.');
             setAlertType('danger');
             setShowAlert(true);
             setLoading(false);
             return;
         }
 
-        // Construir objeto de cocción
-        const coccionData = {
-            fecha_encendido: fechaEncendido,
-            hora_inicio: horaInicio,
-            fecha_apagado: fechaApagado || null,
-            hora_fin: horaFin || null,
-            humedad_inicial: humedadInicial || null,
-            estado: estado || 'En curso',
-            horno_id_horno: hornoSeleccionado.id_horno,
-            usuario_id_usuario: idUsuario || null,
-            operadoresCoccion: cargosSeleccionados.map(cargo => ({
-                cargo_coccion_id_cargo_coccion: cargo.cargo,
-                abastecedor_id_abastecedor: cargo.abastecedor_id || null,
-                material_id_material: cargo.material_id || null,
-                cantidad_usada: cargo.cantidad_usada || null,
-                personal_id_personal: cargo.id_personal,
-            })),
-        };
+        if (!fechaEncendido) {
+            setAlertMessage('La fecha de encendido es obligatoria.');
+            setAlertType('danger');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
 
-        // console.log(coccionData);
-        // console.log(cargosSeleccionados);
+        if (!horaInicio) {
+            setAlertMessage('La hora de inicio es obligatoria.');
+            setAlertType('danger');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
+
+        console.log('Cantidad de quemadores seleccionados:', trabajadoresSeleccionadosQuemadores.length);
+        // Validar cantidad de humeadores seleccionados
+        if (trabajadoresSeleccionadosHumeador.length !== cantidad_humeadores) {
+            setAlertMessage(`Debes seleccionar exactamente ${cantidad_humeadores} humeadores.`);
+            setAlertType('danger');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
+        // Validar cantidad de quemadores seleccionados
+        if (trabajadoresSeleccionadosQuemadores.length !== Number(cantidad_quemadores)) {
+            setAlertMessage(`Debes seleccionar exactamente ${cantidad_quemadores} quemadores.`);
+            setAlertType('danger');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
 
         try {
+            // Construir objeto de cocción
+            const coccionData = {
+                fecha_encendido: fechaEncendido,
+                hora_inicio: horaInicio,
+                fecha_apagado: fechaApagado || null,
+                hora_fin: horaFin || null,
+                humedad_inicial: humedadInicial || null,
+                estado: estado || 'En curso',
+                horno_id_horno: hornoSeleccionado.id_horno,
+                operadoresCoccion: [
+                    ...trabajadoresSeleccionadosQuemadores.map(trabajador => {
+                        // Busca el cargo correspondiente en cargosSeleccionados
+                        const cargo = cargoCoccionData.find(c => c.nombre_cargo === "Quemador");
+                        return {
+                            cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
+                            abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
+                            material_id_material: trabajador.material_id || null,
+                            cantidad_usada: trabajador.cantidad_usada || null,
+                            personal_id_personal: trabajador.id_personal,
+                        };
+                    }),
+                    ...trabajadoresSeleccionadosHumeador.map(trabajador => {
+                        // Busca el cargo correspondiente en cargosSeleccionados
+                        const cargo = cargoCoccionData.find(c => c.nombre_cargo === "Humeador");
+                        return {
+                            cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
+                            abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
+                            material_id_material: trabajador.material_id || null,
+                            cantidad_usada: trabajador.cantidad_usada || null,
+                            personal_id_personal: trabajador.id_personal,
+                        };
+                    }),
+                ],
+            };
+
             let response;
             if (isEditing) {
                 response = await axios.put(`${config.apiBaseUrl}coccion/${idCoccionSeleccionada}`, coccionData, configToken);
@@ -310,6 +439,8 @@ const Coccion = () => {
             setHornoSeleccionado(null);
             setCargosSeleccionados([]);
             setEstado('En curso');
+            setTrabajadoresSeleccionadosHumeador([]);
+            setTrabajadoresSeleccionadosQuemadores([]);
 
             if (isEditing) {
                 setIsEditing(false);
@@ -317,7 +448,7 @@ const Coccion = () => {
             }
 
             // Actualizar lista de cocciones
-            const updatedCoccionData = await axios.get(`${config.apiBaseUrl}coccion/`);
+            const updatedCoccionData = await axios.get(`${config.apiBaseUrl}coccion/`, configToken);
             setCoccionlData(updatedCoccionData.data);
 
         } catch (error) {
@@ -330,8 +461,6 @@ const Coccion = () => {
         }
     };
 
-
-
     // Función para limpiar el formulario de cocción
     const resetFormCoccion = () => {
         setIdHornoSeleccionado('');
@@ -341,6 +470,16 @@ const Coccion = () => {
         setHoraFin('');        // Limpiar la hora de fin
         setEstado('');         // Limpiar el estado de cocción
         setIsEditing(false);   // Desactivar modo edición
+    };
+
+    const fetchDetallesCoccion = async (idCoccion) => {
+        try {
+            const response = await axios.get(`${config.apiBaseUrl}coccion/${idCoccion}/detalles`, configToken);
+            setCoccionDetalles(response.data);
+            setShowModalCoccionDetalles(true);
+        } catch (error) {
+            console.error("Error al obtener los detalles de la cocción:", error);
+        }
     };
 
 
@@ -364,7 +503,8 @@ const Coccion = () => {
         const hornoData = {
             prefijo,
             nombre,
-            cantidad_operadores
+            cantidad_humeadores,
+            cantidad_quemadores,
         };
         // console.log(hornoData);
         try {
@@ -410,14 +550,16 @@ const Coccion = () => {
         setIdHornoSeleccionado(row.id_horno);
         setPrefijo(row.prefijo);
         setNombreHorno(row.nombre);
-        setCantidadOperadores(row.cantidad_operadores);
+        setCantidadHumeadores(row.cantidad_humeadores);
+        setCantidadQuemadores(row.cantidad_quemadores);
     }
 
     const resetFormHorno = () => {
         setIdHornoSeleccionado('');
         setPrefijo('');
         setNombreHorno('');
-        setCantidadOperadores('');
+        setCantidadHumeadores('');
+        setCantidadQuemadores('');
         setIsEditingHorno(false);
     }
 
@@ -517,33 +659,19 @@ const Coccion = () => {
         fetchCargoCoccionData();
         fetchTrabajadoresData();
 
-        if (hornoSeleccionado && cargosSeleccionados.length > hornoSeleccionado.cantidad_operarios) {
-            // Mostrar mensaje de éxito
-            setAlertMessage('Se excede la cantidad de operarios seleccionados.');
-            setAlertType('danger'); // Tipo de alerta
-            setShowAlert(true); // Mostrar la alerta
-            setTimeout(() => {
-                setShowAlert(false); // Ocultar alerta después de 2 segundos
-            }, 2000);
-        } else {
-            setShowAlert(false);
-        }
-    }, [cargosSeleccionados, hornoSeleccionado]);
-
-    const obtenerFechaActual = () => {
+        // Obtener la fecha actual cuando se carga el componente
         const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
+        const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+        const formattedDate = localDate.toISOString().split('T')[0]; // Formato yyyy-mm-dd
+        setFechaEncendido(formattedDate);
 
-    const obtenerHoraActual = () => {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0'); // Asegura dos dígitos para la hora
-        const minutes = String(now.getMinutes()).padStart(2, '0'); // Asegura dos dígitos para los minutos
-        return `${hours}:${minutes}`;
-    };
+        // Obtener la hora actual y formatearla en formato HH:mm
+        const hours = String(today.getHours()).padStart(2, '0');
+        const minutes = String(today.getMinutes()).padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`;
+        setHoraInicio(formattedTime);
+
+    }, [cargosSeleccionados, hornoSeleccionado]);
 
     // Función para manejar el cambio del select de tipo de horno
     const handleHornoChange = (e) => {
@@ -551,43 +679,19 @@ const Coccion = () => {
 
         if (idHorno == "") {
             setHornoSeleccionado(null); // no hay seleccionado, deshabilitar los selectores de cargo
-            setCantidadOperadores(0); //Restablacer cantidad de operarios
+            setCantidadHumeadores(0);
+            setCantidadQuemadores(0);
             setCargosSeleccionados([]); //Limpiar seleccion de cargos
         } else {
             const hornoSeleccionado = hornosData.find(horno => horno.id_horno === parseInt(idHorno)); // Buscar el horno seleccionado
             // console.log(hornoSeleccionado);
             if (hornoSeleccionado) {
                 setHornoSeleccionado(hornoSeleccionado); // Actualizar el horno seleccionado
-                setCantidadOperadores(hornoSeleccionado.cantidad_operadores); // Actualizar la cantidad de operarios
+                setCantidadHumeadores(hornoSeleccionado.cantidad_humeadores);
+                setCantidadQuemadores(hornoSeleccionado.cantidad_quemadores);
             }
         }
     };
-
-    const handleCargoChange = (e, id_personal) => {
-        const cargoSeleccionado = e.target.value;
-
-        if (cargoSeleccionado === "") {
-            setCargosSeleccionados(prev => prev.filter(item => item.id_personal != id_personal));
-            return;
-        } else {
-
-            // Agregar o actualizar el cargo seleccionado
-            setCargosSeleccionados(prev => {
-                const yaSeleccionado = prev.find(item => item.id_personal === id_personal);
-                if (yaSeleccionado) {
-                    // Actualizar el cargo seleccionado para este trabajador
-                    return prev.map(item =>
-                        item.id_personal === id_personal ? { id_personal, cargo: cargoSeleccionado } : item
-                    );
-                } else {
-                    // Agregar nuevo cargo seleccionado
-                    return [...prev, { id_personal, cargo: cargoSeleccionado }];
-                }
-            });
-        }
-    }
-    // Deshabilitar el botón de guardar si se excede el límite de operarios
-    const guardarDisabled = showAlert || !hornoSeleccionado || cargosSeleccionados.length !== hornoSeleccionado?.cantidad_operadores;
 
     // Abre el modal y establece la entidad y el ID que se va a eliminar
     const handleEliminar = (entidad, id) => {
@@ -634,6 +738,18 @@ const Coccion = () => {
         }
     };
 
+    const formatFecha = (fecha) => {
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        return new Date(fecha).toLocaleDateString('es-ES', options);
+    };
+
+    const formatHora = (hora) => {
+        const [hours, minutes] = hora.split(':');
+        const hoursIn12 = hours % 12 || 12; // Convertir a formato 12 horas
+        const ampm = hours < 12 ? 'AM' : 'PM';
+        return `${hoursIn12}:${minutes} ${ampm}`;
+    };
+
     return (
         <div className='d-flex'>
             {/* <Sidebar /> */}
@@ -677,21 +793,14 @@ const Coccion = () => {
                                                     </div>
                                                     <div className="mb-3">
                                                         <div className="row">
-                                                            <div className="col-6">
-                                                                <label htmlFor="InputCodHorno" className="form-label">Cod. Horno</label>
-                                                                <input type="text" className="form-control" id="InputCodHorno" aria-describedby="codHelp"
-                                                                    value={prefijo}
-                                                                    onChange={(e) => setPrefijo(e.target.value)} required
-                                                                />
-                                                                <div id="codHelp" className="form-text">Prefijo para identificar un horno.</div>
-                                                            </div>
-                                                            <div className="col-6">
-                                                                <label htmlFor="InputCantOperadores" className="form-label">Cant. Operadores</label>
-                                                                <input type="number" className="form-control" id="InputCantOperadores"
-                                                                    value={cantidad_operadores}
-                                                                    onChange={(e) => setCantidadOperadores(e.target.value)} required
-                                                                />
-                                                            </div>
+
+                                                            <label htmlFor="InputCodHorno" className="form-label">Cod. Horno</label>
+                                                            <input type="text" className="form-control" id="InputCodHorno" aria-describedby="codHelp"
+                                                                value={prefijo}
+                                                                onChange={(e) => setPrefijo(e.target.value)} required
+                                                            />
+                                                            <div id="codHelp" className="form-text">Prefijo para identificar un horno.</div>
+
                                                         </div>
                                                     </div>
                                                     <div className="mb-3">
@@ -700,6 +809,25 @@ const Coccion = () => {
                                                             value={nombre}
                                                             onChange={(e) => setNombreHorno(e.target.value)} required
                                                         />
+                                                    </div>
+
+                                                    <div className="mb-3">
+                                                        <div className="row">
+                                                            <div className="col-6">
+                                                                <label htmlFor="InputCantHumeadores" className="form-label">Humeadores</label>
+                                                                <input type="number" className="form-control" id="InputCantHumeadores"
+                                                                    value={cantidad_humeadores}
+                                                                    onChange={(e) => setCantidadHumeadores(e.target.value)} required
+                                                                />
+                                                            </div>
+                                                            <div className="col-6">
+                                                                <label htmlFor="InputCantQuemadores" className="form-label">Quemadores</label>
+                                                                <input type="number" className="form-control" id="InputCantQuemadores"
+                                                                    value={cantidad_quemadores}
+                                                                    onChange={(e) => setCantidadQuemadores(e.target.value)} required
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     <button type="submit" className="btn btn-primary">{isEditingHorno ? 'Actualizar' : 'Registrar'}</button>
 
@@ -785,6 +913,66 @@ const Coccion = () => {
                     </div>
                     {/* Fin modal de cargo cocción */}
 
+                    {showModalCoccionDetalles && coccionDetalles && (
+                        <div className="modal modal-sm show fade" style={{ display: 'block' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+                                <div className="modal-content">
+                                    <div className="modal-header bg-primary text-white">
+                                        <h5 className="modal-title">Detalles de la Cocción</h5>
+                                        <button
+                                            type="button"
+                                            className="btn-close"
+                                            onClick={() => setShowModalCoccionDetalles(false)}
+                                        ></button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <p className='mb-0'><strong>Horno:</strong> {coccionDetalles.prefijo} {coccionDetalles.nombre_horno}</p>
+                                        <p className='mb-0'><strong>Fecha Encendido:</strong> {new Date(coccionDetalles.fecha_encendido).toLocaleDateString()}</p>
+                                        <p className='mb-0'><strong>Hora Inicio:</strong> {coccionDetalles.hora_inicio}</p>
+                                        <p className='mb-0'><strong>Estado:</strong> {coccionDetalles.estado}</p>
+
+                                        <h6 className='mt-4 mb-2'>Operadores:</h6>
+                                        <div className=''>
+                                            <h6>Humeador:</h6>
+                                            <ul>
+                                                {coccionDetalles.operadores
+                                                    .filter(operador => operador.nombre_cargo === 'Humeador')
+                                                    .map((operador, index) => (
+                                                        <li key={index}>
+                                                            {operador.nombre_operador}
+                                                        </li>
+                                                    ))}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h6>Quemadores:</h6>
+                                            <ul>
+                                                {coccionDetalles.operadores
+                                                    .filter(operador => operador.nombre_cargo === 'Quemador')
+                                                    .map((operador, index) => (
+                                                        <li key={index}>
+                                                            {operador.nombre_operador}
+                                                        </li>
+                                                    ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        {/* <button className="btn btn-secondary" onClick={() => setShowDetallesModal(false)}>
+                                            Cerrar
+                                        </button> */}
+                                        <button className="btn btn-primary" onClick={() => window.print()}>
+                                            <FaIcons.FaPrint /> Imprimir
+                                        </button>
+                                        <button className="btn btn-success" onClick={() => alert('Compartir funcionalidad no implementada')}>
+                                            <FaIcons.FaShareAlt /> Compartir
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Inicio modal de cocción */}
                     <div className="modal fade" id="modalCoccion" aria-labelledby="tituloModalCoccion" aria-hidden="true">
                         <div className="modal-dialog modal-lg">
@@ -853,35 +1041,155 @@ const Coccion = () => {
                                                 </div>
                                                 <div className="modal-footer">
                                                     <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                                    <button type="submit" disabled={guardarDisabled} className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
+                                                    <button type="submit" className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
                                                 </div>
                                             </form>
                                         </div>
                                         <div className="col-12 col-md-6">
                                             <div className='text-center'>
                                                 <p>Seleccionar personal a operar</p>
-                                                <p className='text-body-secondary'><small>Operadores necesarios: {cantidad_operadores} </small></p>
+                                                <p className='text-body-secondary mb-0'><small>Humeadores necesarios: {cantidad_humeadores} </small></p>
+                                                <p className='text-body-secondary'><small>Quemadores necesarios: {cantidad_quemadores} </small></p>
                                             </div>
-                                            <DataTable
-                                                columns={columnsTrabajadores} // Las columnas configuradas para trabajadores
-                                                data={trabajadoresData} // Los datos de trabajadores obtenidos de la API
-                                                pagination={false}
-                                                progressPending={loading} // Mostrar carga si es necesario
-                                                highlightOnHover={true}
-                                                responsive={true}
-                                                persistTableHead={true}
-                                                noDataComponent="No hay registros de personal"
-                                            />
+
+                                            <div className='wrapper_humeador'>
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <p className='mb-0'>Humeador</p>
+                                                    <button
+                                                        id='btnSeleccionarHumeador'
+                                                        className='btn btn-primary'
+                                                        onClick={abrirModalHumeador}  // Abrir el modal al presionar el botón
+                                                        disabled={!hornoSeleccionado}
+                                                    >
+                                                        <FaIcons.FaPlus />
+                                                    </button>
+                                                </div>
+                                                <div className="card my-2">
+                                                    {/* Mostrar los trabajadores seleccionados */}
+                                                    <ul className='list-group'>
+                                                        {trabajadoresSeleccionadosHumeador.length > 0 ? (
+                                                            trabajadoresSeleccionadosHumeador.map((trabajador) => (
+                                                                <li className='list-group-item' key={trabajador.id_personal}>
+                                                                    {trabajador.nombre_completo}
+                                                                    <button
+                                                                        className='btn btn-danger btn-sm float-end'
+                                                                        onClick={() => manejarEliminarHumeador(trabajador.id_personal)}
+                                                                        aria-label="Eliminar"
+                                                                    >
+                                                                        <FaIcons.FaMinus />
+                                                                    </button>
+
+                                                                </li>
+                                                            ))
+                                                        ) : (
+                                                            <span
+                                                                className='d-flex border border-light-subtle justify-content-center text-danger'
+                                                            >
+                                                                No se han seleccionado operadores.
+                                                            </span>
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div className='wrapper_quemadores'>
+                                                <div className="d-flex justify-content-between align-items-center">
+
+                                                    <p className='mb-0'>Quemadores</p>
+                                                    <button disabled={!hornoSeleccionado} id='btnSeleccionarQuemador' className='btn btn-primary' onClick={abrirModalQuemadores}><FaIcons.FaPlus /></button>
+                                                </div>
+                                                <div className="card my-2">
+                                                    {/* Mostrar los trabajadores seleccionados */}
+                                                    <ul className='list-group'>
+                                                        {trabajadoresSeleccionadosQuemadores.length > 0 ? (
+                                                            trabajadoresSeleccionadosQuemadores.map((trabajador) => (
+                                                                <li className='list-group-item' key={trabajador.id_personal}>
+                                                                    {trabajador.nombre_completo}
+                                                                    <button
+                                                                        className='btn btn-danger btn-sm float-end'
+                                                                        onClick={() => manejarEliminarQuemador(trabajador.id_personal)}
+                                                                        aria-label="Eliminar"
+                                                                    >
+                                                                        <FaIcons.FaMinus />
+                                                                    </button>
+                                                                </li>
+                                                            ))
+                                                        ) : (
+                                                            <span
+                                                                className='d-flex border border-light-subtle justify-content-center text-danger'
+                                                            >
+                                                                No se han seleccionado operadores.
+                                                            </span>
+                                                        )
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-
-
                                 </div>
                             </div>
                         </div>
 
                     </div>
                     {/* Fin modal de coccion */}
+
+                    {/* Inicio Modal de selección de humeador */}
+                    {mostrarModalHumeador && (
+                        <div className="modal" style={{ display: 'block' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+
+                                <div className="modal-content modal-sm">
+                                    <div className="modal-header bg-primary text-white">
+                                        <h5 className="modal-title">Seleccionar Humeador</h5>
+                                    </div>
+                                    <div className="modal-body">
+                                        <div className='list-group'>
+                                            {trabajadoresData.map((trabajador) => (
+
+                                                <button key={trabajador.id_personal} className='list-group-item' onClick={() => manejarSeleccionHumeador(trabajador)}>
+                                                    {trabajador.nombre_completo}
+                                                </button>
+
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="button" className="btn btn-secondary" onClick={cerrarModal}>Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* Fin Modal de selección de humeador */}
+
+                    {/* Inicio Modal de selección de quemadores */}
+                    {monstrarModalQuemadores && (
+                        <div className="modal" style={{ display: 'block' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+                                <div className="modal-content">
+                                    <div className="modal-header bg-primary text-white">
+                                        <h5 className="modal-title">Seleccionar Quemadores</h5>
+                                    </div>
+                                    <div className="modal-body">
+                                        <div>
+                                            {trabajadoresData.map((trabajador) => (
+                                                <div key={trabajador.id_personal}>
+                                                    <button onClick={() => manejarSeleccionQuemadores(trabajador)}>
+                                                        {trabajador.nombre_completo}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="button" className="btn btn-secondary" onClick={cerrarModalQuemadores}>Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* Fin Modal de selección de quemadores */}
+
 
                     {/* Inicio tabla cocciones */}
                     <section className="mt-3">
@@ -904,7 +1212,7 @@ const Coccion = () => {
                     <div className={`modal ${mostrarModalEliminar ? 'show' : ''}`} tabIndex="-1" style={{ display: mostrarModalEliminar ? 'block' : 'none' }}>
                         <div className="modal-dialog">
                             <div className="modal-content">
-                                <div className="modal-header">
+                                <div className="modal-header bg-danger text-white">
                                     <h5 className="modal-title">Confirmar Eliminación</h5>
                                     <button type="button" className="btn-close" onClick={handleCloseModal} aria-label="Close"></button>
                                 </div>
