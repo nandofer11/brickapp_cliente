@@ -68,6 +68,11 @@ const Coccion = () => {
     const [showModalCoccionDetalles, setShowModalCoccionDetalles] = useState(false);
     const [coccionDetalles, setCoccionDetalles] = useState(null);
 
+    const [showMaterialModal, setShowMaterialModal] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
+
+    const [materialesData, setMaterialesData] = useState([]);
+
     // Configurar columnas para la tabla cocciones
     const columns = [
         {
@@ -354,15 +359,7 @@ const Coccion = () => {
             return;
         }
 
-        if (!horaInicio) {
-            setAlertMessage('La hora de inicio es obligatoria.');
-            setAlertType('danger');
-            setShowAlert(true);
-            setLoading(false);
-            return;
-        }
-
-        console.log('Cantidad de quemadores seleccionados:', trabajadoresSeleccionadosQuemadores.length);
+        // console.log('Cantidad de quemadores seleccionados:', trabajadoresSeleccionadosQuemadores.length);
         // Validar cantidad de humeadores seleccionados
         if (trabajadoresSeleccionadosHumeador.length !== cantidad_humeadores) {
             setAlertMessage(`Debes seleccionar exactamente ${cantidad_humeadores} humeadores.`);
@@ -384,7 +381,7 @@ const Coccion = () => {
             // Construir objeto de cocción
             const coccionData = {
                 fecha_encendido: fechaEncendido,
-                hora_inicio: horaInicio,
+                hora_inicio: horaInicio || null,
                 fecha_apagado: fechaApagado || null,
                 hora_fin: horaFin || null,
                 humedad_inicial: humedadInicial || null,
@@ -397,7 +394,7 @@ const Coccion = () => {
                         return {
                             cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
                             abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                            material_id_material: trabajador.material_id || null,
+                           material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
                             cantidad_usada: trabajador.cantidad_usada || null,
                             personal_id_personal: trabajador.id_personal,
                         };
@@ -408,7 +405,7 @@ const Coccion = () => {
                         return {
                             cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
                             abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                            material_id_material: trabajador.material_id || null,
+                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null, 
                             cantidad_usada: trabajador.cantidad_usada || null,
                             personal_id_personal: trabajador.id_personal,
                         };
@@ -658,6 +655,7 @@ const Coccion = () => {
         fetchHornosnData();
         fetchCargoCoccionData();
         fetchTrabajadoresData();
+        fetchMaterialData();
 
         // Obtener la fecha actual cuando se carga el componente
         const today = new Date();
@@ -665,13 +663,26 @@ const Coccion = () => {
         const formattedDate = localDate.toISOString().split('T')[0]; // Formato yyyy-mm-dd
         setFechaEncendido(formattedDate);
 
-        // Obtener la hora actual y formatearla en formato HH:mm
-        const hours = String(today.getHours()).padStart(2, '0');
-        const minutes = String(today.getMinutes()).padStart(2, '0');
-        const formattedTime = `${hours}:${minutes}`;
-        setHoraInicio(formattedTime);
+        // // Obtener la hora actual y formatearla en formato HH:mm
+        // const hours = String(today.getHours()).padStart(2, '0');
+        // const minutes = String(today.getMinutes()).padStart(2, '0');
+        // const formattedTime = `${hours}:${minutes}`;
+        // setHoraInicio(formattedTime);
 
     }, [cargosSeleccionados, hornoSeleccionado]);
+
+    //Obtener todos los materiales
+    const fetchMaterialData = async () => {
+        try {
+            const response = await axios.get(`${config.apiBaseUrl}material/`, configToken);
+            setMaterialesData(response.data);
+            // setLoading(false); //Cambia el estado de loading a false
+            // console.log(response.data);
+        } catch (error) {
+            console.error("Error al obtener los datos de materiales: ", error);
+            // setLoading(false);
+        }
+    }
 
     // Función para manejar el cambio del select de tipo de horno
     const handleHornoChange = (e) => {
@@ -765,7 +776,7 @@ const Coccion = () => {
                     <div className="d-flex p-2 justify-content-between">
                         <h3 className="">Gestionar cocción</h3>
                         <div className="d-flex">
-                            <button type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCoccion"><FaIcons.FaFire /> Registrar</button>
+                            <button type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCoccion"><FaIcons.FaFire /> Registrar cocción</button>
                         </div>
                     </div>
                     <div className='d-flex'>
@@ -978,80 +989,76 @@ const Coccion = () => {
                         <div className="modal-dialog modal-lg">
                             <div className="modal-content">
                                 <div className="modal-header bg-primary text-white">
-                                    <h1 className="modal-title fs-5" id="tituloModalCoccion">Registrar cocción</h1>
+                                    <h5 className="modal-title w-100 text-center" id="tituloModalCoccion">Registrar cocción</h5>
                                     <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div className="modal-body">
                                     <div className="row">
                                         <div className="col-12 col-md-6">
-                                            <form onSubmit={(e) => handleSubmitCoccion(e)}>
+                                            <div className="row align-items-end">
+                                                <div className="col-6">
+                                                    <div className="mb-3">
+                                                        <label htmlFor="inputHorno" className="form-label">Horno</label>
+                                                        <select className="form-select" onChange={handleHornoChange}>
+                                                            <option value="">Sel. un horno</option>
+                                                            {hornosData.map((horno) => (
+                                                                <option key={horno.id_horno} value={horno.id_horno}>
+                                                                    {horno.prefijo} - {horno.nombre}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className='text-center'>
+                                                        <p className='text-body-secondary mb-0'><small>Humeadores: {cantidad_humeadores} </small></p>
+                                                        <p className='text-body-secondary'><small>Quemadores: {cantidad_quemadores} </small></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className='row'>
 
-                                                <div className="row">
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputHorno" className="form-label">Horno</label>
-                                                            <select className="form-select" onChange={handleHornoChange}>
-                                                                <option value="">Sel. un horno</option>
-                                                                {hornosData.map((horno) => (
-                                                                    <option key={horno.id_horno} value={horno.id_horno}>
-                                                                        {horno.prefijo} - {horno.nombre}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputHumedadInicial" className="form-label">Humedad inicial</label>
-                                                            <input type="number" className="form-control" id="inputHumedadInicial" />
-                                                        </div>
+                                                <div className="col-6">
+                                                    <div className="mb-3">
+                                                        <label htmlFor="inputFechaEncendido" className="form-label">Fecha de encendido</label>
+                                                        <input type="date" className="form-control" id="inputFechaEncendido" value={fechaEncendido} onChange={(e) => setFechaEncendido(e.target.value)} required />
                                                     </div>
                                                 </div>
-                                                <div className='row'>
 
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputFechaEncendido" className="form-label">Fecha de encendido</label>
-                                                            <input type="date" className="form-control" id="inputFechaEncendido" value={fechaEncendido} onChange={(e) => setFechaEncendido(e.target.value)} required />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputHoraInicio" className="form-label">Hora inicio</label>
-                                                            <input type="time" className="form-control" id="inputHoraInicio" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} required />
-                                                        </div>
+                                                <div className="col-6">
+                                                    <div className="mb-3">
+                                                        <label htmlFor="inputHumedadInicial" className="form-label">Humedad inicial</label>
+                                                        <input type="number" className="form-control" id="inputHumedadInicial" />
                                                     </div>
                                                 </div>
-                                                <div className='row'>
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputFechaApagado" className="form-label">Fecha de apagado</label>
-                                                            <input type="date" className="form-control" id="inputFechaApagado" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6">
-                                                        <div className="mb-3">
-                                                            <label htmlFor="inputHoraFin" className="form-label">Hora fin</label>
-                                                            <input type="time" className="form-control" id="inputHoraFin" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div>
-
-                                                </div>
-                                                <div className="modal-footer">
-                                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                                    <button type="submit" className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                        <div className="col-12 col-md-6">
-                                            <div className='text-center'>
-                                                <p>Seleccionar personal a operar</p>
-                                                <p className='text-body-secondary mb-0'><small>Humeadores necesarios: {cantidad_humeadores} </small></p>
-                                                <p className='text-body-secondary'><small>Quemadores necesarios: {cantidad_quemadores} </small></p>
                                             </div>
 
+                                            <div>
+                                                <div className='d-flex justify-content-between align-items-center my-2'>
+
+                                                    <p className='mb-0'>Seleccionar material</p>
+                                                    <button className='btn btn-primary' id='btnSeleccionarMaterial' onClick={() => setShowMaterialModal(true)} ><FaIcons.FaPlus /></button>
+                                                </div>
+                                                {selectedMaterial ? (
+                                                    <span className='d-flex border border-light-subtle p-2 justify-content-center text-success'>
+                                                        Material seleccionado: {selectedMaterial.nombre}
+                                                    </span>
+                                                ) : (
+                                                    <span className='d-flex border border-light-subtle p-2 justify-content-center text-danger'>
+                                                        No se ha seleccionado material.
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div>
+
+                                            </div>
+
+
+                                        </div>
+                                        <div className="col-12 col-md-6">
+
+
+                                            <p className='text-center'> <strong>Seleccionar personal a operar</strong></p>
                                             <div className='wrapper_humeador'>
                                                 <div className="d-flex justify-content-between align-items-center">
                                                     <p className='mb-0'>Humeador</p>
@@ -1125,6 +1132,10 @@ const Coccion = () => {
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="modal-footer mt-3">
+                                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                            <button type="button" onClick={handleSubmitCoccion} className="btn btn-primary">{isEditing ? 'Actualizar' : 'Guardar'}</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1132,6 +1143,47 @@ const Coccion = () => {
 
                     </div>
                     {/* Fin modal de coccion */}
+
+                    {showMaterialModal && (
+                        <div className="modal show fade" style={{ display: 'block' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+                                <div className="modal-content">
+                                    <div className="modal-header bg-primary text-white">
+                                        <h5 className="modal-title">Seleccionar Material</h5>
+                                        <button
+                                            type="button"
+                                            className="btn-close"
+                                            onClick={() => setShowMaterialModal(false)}
+                                        ></button>
+                                    </div>
+                                    <div className="modal-body">
+                                        {materialesData.length > 0 ? (
+                                            materialesData.map(material => (
+                                                <div key={material.id_material}>
+                                                    <input
+                                                        type="radio"
+                                                        name="material"
+                                                        onChange={() => setSelectedMaterial(material)}
+                                                    />
+                                                    {material.nombre} - {material.presentacion}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p>No hay materiales disponibles.</p>
+                                        )}
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => setShowMaterialModal(false)}
+                                        >
+                                            Cerrar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Inicio Modal de selección de humeador */}
                     {mostrarModalHumeador && (
@@ -1202,7 +1254,11 @@ const Coccion = () => {
                             progressPending={loading}
                             highlightOnHover={true}
                             responsive={true}
-                            noDataComponent="No hay registros de cocciones disponibles"
+                            noDataComponent={
+                                <div style={{ color: '#ff6347', padding: '20px' }}>
+                                    No hay registros de cocciones disponibles
+                                </div>
+                            }
                             persistTableHead={true}
                         />
                     </section>
