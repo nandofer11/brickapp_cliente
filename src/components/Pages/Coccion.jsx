@@ -37,7 +37,6 @@ const Coccion = () => {
     const [horaFin, setHoraFin] = useState('');
     const [humedadInicial, setHumedadInicial] = useState('');
     const [estado, setEstado] = useState('');
-    const [idUsuario, setIdUsuario] = useState(null);
 
     // HORNOS
     const [hornosData, setHornosData] = useState([]);
@@ -248,6 +247,15 @@ const Coccion = () => {
 
     // Función para abrir el modal
     const abrirModalHumeador = () => {
+        // Verificar si existe el cargo "Humeador"
+        const humeadorCargo = cargoCoccionData.find(cargo => cargo.nombre_cargo === "Humeador");
+        if (!humeadorCargo) {
+            setAlertMessage('Debes registrar un cargo de cocción "Humeador" antes de continuar.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return; // No abrir el modal si no existe el cargo
+        }
+
         setMostrarModalHumeador(true);
     };
 
@@ -292,6 +300,15 @@ const Coccion = () => {
 
     // Función para abrir el modal
     const abrirModalQuemadores = () => {
+        // Verificar si existe el cargo "Quemador"
+        const quemadorCargo = cargoCoccionData.find(cargo => cargo.nombre_cargo === "Quemador");
+        if (!quemadorCargo) {
+            setAlertMessage('Debes registrar un cargo de cocción "Quemador" antes de continuar.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return; // No abrir el modal si no existe el cargo
+        }
+
         setMostrarModalQuemadores(true);
     };
 
@@ -347,26 +364,33 @@ const Coccion = () => {
 
         // Validar campos obligatorios
         if (!hornoSeleccionado) {
-            setAlertMessage('Debes seleccionar un horno.');
-            setAlertSeverity(error);
+            setAlertMessage('Selecciona un horno para la cocción.');
+            setAlertSeverity('error');
             setShowAlert(true);
             setLoading(false);
             return;
         }
 
         if (!fechaEncendido) {
-            setAlertMessage('La fecha de encendido es obligatoria.');
-            setAlertSeverity(error);
+            setAlertMessage('Ingresa la fecha de encendido.');
+            setAlertSeverity('error');
             setShowAlert(true);
             setLoading(false);
             return;
         }
 
-        // console.log('Cantidad de quemadores seleccionados:', trabajadoresSeleccionadosQuemadores.length);
+        if (!selectedMaterial) {
+            setAlertMessage('Selecciona un material para la cocción.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            setLoading(false);
+            return;
+        }
+
         // Validar cantidad de humeadores seleccionados
         if (trabajadoresSeleccionadosHumeador.length !== cantidad_humeadores) {
             setAlertMessage(`Debes seleccionar exactamente ${cantidad_humeadores} humeadores.`);
-            setAlertSeverity(error);
+            setAlertSeverity('error');
             setShowAlert(true);
             setLoading(false);
             return;
@@ -374,48 +398,40 @@ const Coccion = () => {
         // Validar cantidad de quemadores seleccionados
         if (trabajadoresSeleccionadosQuemadores.length !== Number(cantidad_quemadores)) {
             setAlertMessage(`Debes seleccionar exactamente ${cantidad_quemadores} quemadores.`);
-            setAlertSeverity(error);
+            setAlertSeverity('error');
             setShowAlert(true);
             setLoading(false);
             return;
         }
 
-        try {
-            // Construir objeto de cocción
-            const coccionData = {
-                fecha_encendido: fechaEncendido,
-                hora_inicio: horaInicio || null,
-                fecha_apagado: fechaApagado || null,
-                hora_fin: horaFin || null,
-                humedad_inicial: humedadInicial || null,
-                estado: estado || 'En curso',
-                horno_id_horno: hornoSeleccionado.id_horno,
-                operadoresCoccion: [
-                    ...trabajadoresSeleccionadosQuemadores.map(trabajador => {
-                        // Busca el cargo correspondiente en cargosSeleccionados
-                        const cargo = cargoCoccionData.find(c => c.nombre_cargo === "Quemador");
-                        return {
-                            cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
-                            abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
-                            cantidad_usada: trabajador.cantidad_usada || null,
-                            personal_id_personal: trabajador.id_personal,
-                        };
-                    }),
-                    ...trabajadoresSeleccionadosHumeador.map(trabajador => {
-                        // Busca el cargo correspondiente en cargosSeleccionados
-                        const cargo = cargoCoccionData.find(c => c.nombre_cargo === "Humeador");
-                        return {
-                            cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
-                            abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
-                            cantidad_usada: trabajador.cantidad_usada || null,
-                            personal_id_personal: trabajador.id_personal,
-                        };
-                    }),
-                ],
-            };
+        // Construir objeto de cocción
+        const operadoresCoccion = [
+            ...trabajadoresSeleccionadosQuemadores.map(trabajador => ({
+                cargo_coccion_id_cargo_coccion: cargoCoccionData.find(c => c.nombre_cargo === "Quemador")?.id_cargo_coccion,
+                personal_id_personal: trabajador.id_personal,
+            })),
+            ...trabajadoresSeleccionadosHumeador.map(trabajador => ({
+                cargo_coccion_id_cargo_coccion: cargoCoccionData.find(c => c.nombre_cargo === "Humeador")?.id_cargo_coccion,
+                personal_id_personal: trabajador.id_personal,
+            })),
+        ];
 
+        const consumosMateriales = trabajadoresSeleccionadosHumeador.map(trabajador => ({
+            personal_id_personal: trabajador.id_personal,
+            material_id_material: selectedMaterial.id_material,
+            cantidad_consumida: trabajador.cantidad_usada || null,
+        }));
+
+        const coccionData = {
+            fecha_encendido: fechaEncendido,
+            hora_inicio: horaInicio || null,
+            estado: estado || 'En curso', // Si no se proporciona un estado, asignar 'En curso'
+            horno_id_horno: hornoSeleccionado.id_horno,
+            operadoresCoccion,
+            consumosMateriales,
+        };
+
+        try {
             let response;
             if (isEditing) {
                 response = await axios.put(`${config.apiBaseUrl}coccion/${idCoccionSeleccionada}`, coccionData, configToken);
@@ -428,14 +444,11 @@ const Coccion = () => {
 
             // Mensaje de éxito
             setAlertMessage(message);
-            setAlertSeverity(success)
+            setAlertSeverity('success');
             setShowAlert(true);
 
             // Limpiar formulario
             setFechaEncendido('');
-            setHoraInicio('');
-            setFechaApagado('');
-            setHoraFin('');
             setHornoSeleccionado(null);
             setCargosSeleccionados([]);
             setEstado('En curso');
@@ -454,7 +467,7 @@ const Coccion = () => {
         } catch (error) {
             // Manejar error
             setAlertMessage(error.response?.data?.error || 'Hubo un problema al registrar la cocción. Inténtalo nuevamente.');
-            setAlertSeverity(error);
+            setAlertSeverity('error');
             setShowAlert(true);
         } finally {
             setLoading(false);
@@ -1069,8 +1082,8 @@ const Coccion = () => {
 
                                                 <div className="col-6">
                                                     <div className="mb-3">
-                                                        <label htmlFor="inputHumedadInicial" className="form-label">Humedad inicial</label>
-                                                        <input type="number" className="form-control" id="inputHumedadInicial" />
+                                                        <label htmlFor="inputHumedadInicial" className="form-label">Humedad<span className='form-text'> (Opcional)</span></label>
+                                                        <input type="number" className="form-control" id="inputHumedadInicial" placeholder='% inicial' />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1083,7 +1096,7 @@ const Coccion = () => {
                                                 </div>
                                                 {selectedMaterial ? (
                                                     <span className='d-flex border border-light-subtle p-2 justify-content-center text-success'>
-                                                        Material seleccionado: {selectedMaterial.nombre}
+                                                        Material seleccionado: <span><strong> {selectedMaterial.nombre}</strong></span>
                                                     </span>
                                                 ) : (
                                                     <span className='d-flex border border-light-subtle p-2 justify-content-center text-danger'>
@@ -1289,7 +1302,7 @@ const Coccion = () => {
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}
                         <DataTable
-                            title="Lista de cocciones"
+                            title="Listado de cocciones"
                             columns={columns}
                             data={coccionData}
                             pagination={true}

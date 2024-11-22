@@ -208,7 +208,7 @@ const Trabajadores = () => {
             setMostrarModalEliminarTrabajador(false);
             // Mostrar mensaje de éxito
             setAlertMessage('Trabajador eliminado con éxito.');
-            setAlertType('success'); // Tipo de alerta
+            setAlertSeverity('success'); // Tipo de alerta
             setShowAlert(true); // Mostrar la alerta
             setTimeout(() => {
                 setShowAlert(false); // Ocultar alerta después de 2 segundos

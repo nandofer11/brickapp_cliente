@@ -5,9 +5,10 @@ import * as FaIcons from 'react-icons/fa';
 import config from "../../config";
 import axios from "axios";
 
-// import ModalSeleccionarProveedor from "./ModalSeleccionarProveedor";
-
 import '../../App.css'
+
+import { Snackbar } from '@mui/material';
+import Alert from '@mui/material/Alert';
 
 
 const Inventario = () => {
@@ -35,32 +36,28 @@ const Inventario = () => {
   const [idMaterial, setIdMaterial] = useState(null);
 
   // ESTADOS PARA COMPRAS DE MATERIAL
-  const [isEditingCompra, setIsEditingCompra] = useState(false);
   const [fechaCompra, setFechaCompra] = useState('');
   const [estadoPago, setEstadoPago] = useState('');
   const [detalleComprasData, setDetalleComprasData] = useState([]);
-  const [destino, setDestino] = useState("Quema");
+  const [destino, setDestino] = useState(false);
 
 
   // ESTADOS PARA MANEJAR LA BUSQUEDA Y SELECCION EN EL REGISTRO DE COMPRA
   const [showProveedorModal, setShowProveedorModal] = useState(false);
-  const [isModalMaterialOpen, setIsModalMaterialOpen] = useState(false);
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
 
-  const [proveedores, setProveedores] = useState([]);
+
   const [selectedProveedor, setSelectedProveedor] = useState(null);
   const [selectedMaterial, setSelectedMaterial] = useState(null); // Material seleccionado
-  const [inputProveedor, setInputProveedor] = useState('');
-  const [shouldFocusMaterial, setShouldFocusMaterial] = useState(false);
 
-  const [filteredMateriales, setFilteredMateriales] = useState([]); // Materiales filtrados según la búsqueda
   const [inputNombreMaterial, setInputNombreMaterial] = useState(''); // Valor del input de búsqueda de materiales
   const [cantidadMaterial, setCantidadMaterial] = useState(""); // Para la cantidad
   const [precioCompra, setPrecioCompra] = useState(""); // Para el precio de compra
 
   // Estados para las alertas
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
-  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(''); // Mensaje a mostrar
+  const [showAlert, setShowAlert] = useState(false);   // Controlar visibilidad del Snackbar
+  const [alertSeverity, setAlertSeverity] = useState('error'); // Severidad del Alert (success o error)
 
   const token = localStorage.getItem('token'); //obtener token de localstorage
 
@@ -180,74 +177,129 @@ const Inventario = () => {
 
   /*** INICIO DE FUNCIONES PARA BÚSQUEDA Y SELECCIÓN ***/
   // Función para buscar proveedores
-  const obtenerProveedores = async (nombre) => {
-    const response = await fetch(`${config.apiBaseUrl}proveedores?nombre=${nombre}`, configToken);
+  const obtenerProveedores = async () => {
+    const response = await fetch(`${config.apiBaseUrl}proveedores/`, configToken);
     const data = await response.json();
     return data.map((proveedor) => ({
       id: proveedor.id_proveedor,
-      name: proveedor.nombre,
+      nombre: proveedor.nombre,
       tipo_documento: proveedor.tipo_documento,
       nro_documento: proveedor.nro_documento,
     }));
   };
 
-  const abrirModalProveedor = () => {
-    setIsModalProveedorOpen(true);
-  };
-
-  const cerrarModalProveedor = () => {
-    setIsModalProveedorOpen(false);
-  };
-
-  const abrirModalMaterial = () => {
-    setIsModalMaterialOpen(true);
-  };
-
-  const cerrarModalMaterial = () => {
-    setIsModalMaterialOpen(false);
-  };
-
   const handleSelectProveedor = (proveedor) => {
     setSelectedProveedor(proveedor);
-    setInputProveedor(proveedor.name);
-    cerrarModalProveedor(); // Cierra el modal de proveedor
   };
 
   const handleSelectMaterial = (material) => {
     setSelectedMaterial(material);
-    setInputNombreMaterial(material.name);
-    setShouldFocusMaterial(true); // Foco al campo cantidad
-    cerrarModalMaterial(); // Cierra el modal de material
   };
 
-  const inputNombreMaterialRef = useRef(null);
+  const ModalSeleccionarProveedor = ({ show, onHide, onSelectProveedor }) => {
+    const [proveedores, setProveedores] = useState([]);
 
-  // Función para manejar la búsqueda y cargar los resultados en tiempo real
-  const handleSearch = async (nombre) => {
-    setInputProveedor(nombre); // Actualiza el valor del input en tiempo real
+    useEffect(() => {
+      const fetchProveedores = async () => {
+        try {
+          const data = await obtenerProveedores(); // Asegúrate de que esta función retorne los datos correctamente
+          setProveedores(data);
+        } catch (error) {
+          console.error("Error al obtener proveedores:", error);
+        }
+      };
 
-    if (nombre) {
-      const proveedoresList = await obtenerProveedores(nombre);
-      setProveedores(proveedoresList);
-    } else {
-      // Si el campo está vacío, restablece la lista de proveedores
-      setProveedores([]);
-    }
+      if (show) {
+        fetchProveedores();
+      }
+    }, [show]);
+
+    return (
+      <div className={`modal ${show ? 'show' : ''}`} tabIndex="-1" style={{ display: show ? 'block' : 'none' }}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header bg-primary text-white">
+              <h5 className="modal-title">Seleccionar Proveedor</h5>
+              <button type="button" className="btn-close" onClick={onHide}></button>
+            </div>
+            <div className="modal-body">
+              <ul className="list-group">
+                {proveedores.map((proveedor) => (
+                  <li
+                    key={proveedor.id_proveedor}
+                    className="list-group-item"
+                    onClick={() => {
+                      onSelectProveedor(proveedor);
+                      onHide();
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {proveedor.nombre} - {proveedor.tipo_documento}: {proveedor.nro_documento}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  // Función para manejar la selección de un proveedor y cargar los datos en los campos
-  const handleSelect = (item) => {
-    setSelectedProveedor(item);
-    setInputProveedor(item.name);
+  const ModalSeleccionarMaterial = ({ show, onHide, onSelectMaterial }) => {
+    const [materiales, setMateriales] = useState([]);
 
+    useEffect(() => {
+      const fetchMateriales = async () => {
+        try {
+          const data = await obtenerMateriales(); // Asegúrate de que esta función retorne los datos correctamente
+          console.log("Materiales obtenidos:", data); // Verifica que los datos se obtienen correctamente
+          setMateriales(data);
+        } catch (error) {
+          console.error("Error al obtener materiales:", error);
+        }
+      };
+
+      // Solo llamar a fetchMateriales si el modal está visible
+      if (show) {
+        fetchMateriales();
+      }
+    }, [show]); // Solo dependemos de `show`
+
+    return (
+      <div className={`modal ${show ? 'show' : ''}`} tabIndex="-1" style={{ display: show ? 'block' : 'none' }}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Seleccionar Material</h5>
+              <button type="button" className="btn-close" onClick={onHide}></button>
+            </div>
+            <div className="modal-body">
+              {materiales.length === 0 ? (
+                <p>No hay materiales disponibles.</p> // Mensaje si no hay materiales
+              ) : (
+                <ul className="list-group">
+                  {materiales.map((material) => (
+                    <li
+                      key={material.id_material} // Asegúrate de usar el id_material
+                      className="list-group-item"
+                      onClick={() => {
+                        onSelectMaterial(material);
+                        onHide();
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {material.nombre} - {material.presentacion}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const handleSearchMaterial = async (nombre) => {
-    if (nombre) {
-      const materialesList = await obtenerMateriales(nombre);
-      setFilteredMateriales(materialesList);
-    }
-  };
 
 
   const resentFormCompra = () => {
@@ -260,7 +312,7 @@ const Inventario = () => {
   }
 
   const handleRadioChange = (e) => {
-    setDestino(e.target.value);
+    setDestino(e.target.value === "almacen");
   }
 
 
@@ -268,31 +320,41 @@ const Inventario = () => {
   const handleAgregarMaterial = (e) => {
     e.preventDefault();
 
-    if (!selectedMaterial || !cantidadMaterial || !precioCompra) {
-      // Validación básica
-      setAlertMessage("Debe seleccionar un material, ingresar cantidad y precio.");
-      setAlertType("danger");
+    if (!selectedMaterial) {
+      setAlertMessage('Por favor, selecciona un material.');
+      setAlertSeverity('error');
       setShowAlert(true);
       return;
     }
 
-    // Crear un nuevo objeto con los detalles del material agregado
-    const nuevoDetalle = {
-      id_material: selectedMaterial.id_material, // ID del material
-      nombre: selectedMaterial.nombre, // Nombre del material
-      cantidad: Number(cantidadMaterial), // Cantidad
-      precioCompra: Number(precioCompra), // Precio de compra por unidad
-      subtotal: Number(cantidadMaterial) * Number(precioCompra), // Subtotal (cantidad * precio)
+    if (!cantidadMaterial || cantidadMaterial <= 0) {
+      setAlertMessage('Por favor, ingresa una cantidad válida.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (!precioCompra || precioCompra <= 0) {
+      setAlertMessage('Por favor, ingresa un precio de compra válido.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    const nuevoItem = {
+      id_material: selectedMaterial.id_material,
+      nombre: selectedMaterial.nombre,
+      cantidad: parseFloat(cantidadMaterial),
+      precioCompra: parseFloat(precioCompra),
+      subtotal: parseFloat(cantidadMaterial) * parseFloat(precioCompra),
     };
 
-    // Actualizar el estado de detalleComprasData agregando el nuevo material
-    setDetalleComprasData([...detalleComprasData, nuevoDetalle]);
+    setDetalleComprasData([...detalleComprasData, nuevoItem]);
 
-    // Limpiar los campos del formulario después de añadir el material
-    setCantidadMaterial("");
-    setPrecioCompra("");
+    // Limpiar campos después de agregar
+    setCantidadMaterial('');
+    setPrecioCompra('');
     setSelectedMaterial(null);
-    setInputNombreMaterial(""); // Limpiar el input de búsqueda del material
   };
 
   // Calcular el total de la compra
@@ -335,7 +397,7 @@ const Inventario = () => {
       if (response.data && response.data.message) {
         // Mostrar mensaje de éxito
         setAlertMessage(isEditingAlmacen ? 'Almacén actualizado con éxito.' : 'Almacén registrado exitosamente.');
-        setAlertType('success');
+        setAlertSeverity('success')
         setShowAlert(true);
       }
 
@@ -346,17 +408,11 @@ const Inventario = () => {
       setCodigoAlmacen("");
       setNombreAlmacen("");
 
-      setTimeout(() => {
-        setShowAlert(false);
-      }, 2000);
     } catch (error) {
       setAlertMessage('Error: No se ha podido agregar o actualizar el almacén. ' + error);
-      setAlertType('danger');
+      setAlertSeverity('error');
       setShowAlert(true);
 
-      setTimeout(() => {
-        setShowAlert(false)
-      }, 2000);
     }
   }
 
@@ -381,15 +437,13 @@ const Inventario = () => {
 
   /*** INICIO DE FUNCIONES PARA MATERIAL ***/
   //Obtener todos los materiales
-  const fetchMaterialData = async () => {
+  const obtenerMateriales = async () => {
     try {
       const response = await axios.get(`${config.apiBaseUrl}material/`, configToken);
-      setMaterialesData(response.data);
-      // setLoading(false); //Cambia el estado de loading a false
-      // console.log(response.data);
+      return response.data; // Retorna los datos obtenidos
     } catch (error) {
-      console.error("Error al obtener los datos de materiales: ", error);
-      // setLoading(false);
+      console.error("Error al obtener materiales:", error);
+      throw error; // Lanza el error para que pueda ser manejado por el llamador
     }
   }
 
@@ -411,29 +465,22 @@ const Inventario = () => {
         response = await axios.post(`${config.apiBaseUrl}material/`, materialData, configToken);
       }
       if (response.data && response.data.message) {
-        // Mostrar mensaje de éxito
-        setAlertMessage(isEditingMaterial ? 'Material actualizado con éxito.' : 'Material registrado exitosamente.');
-        setAlertType('success');
-        setShowAlert(true);
+        // Mostrar alerta 
+        setAlertMessage('Material registrado correctamente.');
+        setAlertSeverity('success'); // Tipo de alerta
+        setShowAlert(true); // Mostrar la alerta
       }
 
       // Actualiza la tabla
-      fetchMaterialData();
+      obtenerMateriales();
 
       //limpiar campos
       resetFormMaterial();
-
-      setTimeout(() => {
-        setShowAlert(false);
-      }, 2000);
     } catch (error) {
-      setAlertMessage('Error: No se ha podido agregar o actualizar el material. ' + error);
-      setAlertType('danger');
-      setShowAlert(true);
-
-      setTimeout(() => {
-        setShowAlert(false)
-      }, 2000);
+      // Mostrar alerta de error
+      setAlertMessage('No se registró el material. ' + error.message); // Mensaje de error
+      setAlertSeverity('error'); // Tipo de alerta
+      setShowAlert(true); // Mostrar la alerta
     }
   }
 
@@ -492,7 +539,7 @@ const Inventario = () => {
         fetchAlmacenesData(); // Recargar datos
         resetFormAlmacen();
       } else if (entidadAEliminar === 'material') {
-        fetchMaterialData();
+        obtenerMateriales();
         resetFormMaterial();
       } else if (entidadAEliminar === 'compra') {
         fetchCoccionData();
@@ -512,7 +559,7 @@ const Inventario = () => {
   // activar el evento cuando el modal es mostrado
   useEffect(() => {
     fetchAlmacenesData();
-    fetchMaterialData();
+    obtenerMateriales();
 
     // Obtener la fecha actual cuando se carga el componente
     const today = new Date();
@@ -522,16 +569,111 @@ const Inventario = () => {
 
   }, []);
 
+  const handleSubmitCompra = async (e) => {
+    e.preventDefault();
+
+    // Validaciones
+    if (!fechaCompra) {
+      setAlertMessage('Por favor, selecciona una fecha de compra.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (!estadoPago) {
+      setAlertMessage('Por favor, selecciona un estado de pago.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (!destino) {
+      setAlertMessage('Por favor, selecciona un destino (Quema directa o Para almacén).');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (destino === "almacen" && !idAlmacen) {
+      setAlertMessage('Por favor, selecciona un almacén si el destino es Para almacén.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (!selectedProveedor) {
+      setAlertMessage('Por favor, selecciona un proveedor.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    if (!detalleComprasData || detalleComprasData.length === 0) {
+      setAlertMessage('Por favor, agrega al menos un ítem en el detalle de compras.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+      return;
+    }
+
+    // Preparar los datos para la compra
+    const compraData = {
+      fecha_compra: fechaCompra,
+      estado_pago: estadoPago,
+      destino_quema: destino === "quema" ? 1 : 0, // 1 para quema directa, 0 para almacén
+      almacen_id: destino === "almacen" ? idAlmacen : null, // Almacén solo si el destino es para almacén
+      proveedor_id: selectedProveedor.id_proveedor,
+      detalles: detalleComprasData.map((item) => ({
+          id_material: item.id_material,
+          cantidad: item.cantidad,
+          precio_unitario_compra: item.precioCompra,
+          subtotal: item.subtotal,
+      })),
+  };
+
+    try {
+      const response = await axios.post(`${config.apiBaseUrl}comprasmateriales/`, compraData, configToken);
+      if(response.data && response.data.message){
+
+        setAlertMessage('Compra registrada con éxito.');
+        setAlertSeverity('success');
+        setShowAlert(true);
+      }
+
+      // Reiniciar los campos del formulario
+      resetFormularioCompra();
+    
+    } catch (error) {
+      setAlertMessage('Ocurrió un error al registrar la compra.');
+      setAlertSeverity('error');
+      setShowAlert(true);
+    }
+  };
+
+  const resetFormularioCompra = () => {
+    setFechaCompra('');
+    setEstadoPago('');
+    setDestino(false);
+    setSelectedProveedor(null);
+    setDetalleComprasData([]);
+  };
+
   return (
     <div className='d-flex'>
+
+      {/* Snackbar para alerts */}
+      <Snackbar
+        open={showAlert}
+        autoHideDuration={3000}
+        onClose={() => setShowAlert(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={alertSeverity} onClose={() => setShowAlert(false)}>
+          {alertMessage}
+        </Alert>
+      </Snackbar>
+
       {/* <Sidebar/> */}
       <div className='content'>
-        {/* Alertas de éxito o error */}
-        {showAlert && (
-          <div className={`alert alert-${alertType} mt-2 position-fixed top-0 start-50 translate-middle-x`} role="alert" style={{ zIndex: 1060 }} >
-            {alertMessage}
-          </div>
-        )}
         {/* Inicio Header cocción */}
         <div className="d-flex p-2 justify-content-between">
           <h3 className="">Inventario material de cocción</h3>
@@ -584,14 +726,18 @@ const Inventario = () => {
                     </div>
                     <div className="col-12 col-md-7">
                       <DataTable
-                        title="Lista de almacenes"
+                        title="Listado de almacenes"
                         columns={columnasTablaAlmacenes}
                         data={almacenesData}
                         pagination={false}
                         // progressPending={loading}
                         highlightOnHover={true}
                         responsive={true}
-                        noDataComponent="No hay registros de almacenes disponibles"
+                        noDataComponent={
+                          <div style={{ color: '#ff6347', padding: '20px' }}>
+                            No hay registros de almacenes.
+                          </div>
+                        }
                         persistTableHead={true}
                       />
                     </div>
@@ -652,14 +798,18 @@ const Inventario = () => {
                     </div>
                     <div className="col-12 col-md-7">
                       <DataTable
-                        title="Lista de materiales"
+                        title="Listado de materiales"
                         columns={columnasTablaMateriales}
                         data={materialesData}
                         pagination={false}
                         // progressPending={loading}
                         highlightOnHover={true}
                         responsive={true}
-                        noDataComponent="No hay registros de materiales disponibles"
+                        noDataComponent={
+                          <div style={{ color: '#ff6347', padding: '20px' }}>
+                            No hay registros de materiales.
+                          </div>
+                        }
                         persistTableHead={true}
                       />
                     </div>
@@ -687,7 +837,7 @@ const Inventario = () => {
                 <div className="container">
                   <div className="row">
                     <div className="col-12">
-                      <form>
+                      <form onSubmit={handleSubmitCompra}>
                         <fieldset>
                           <legend>Datos de compra</legend>
                           <div className="row mb-3">
@@ -720,13 +870,16 @@ const Inventario = () => {
                               <label className="form-label">Destino</label>
                               <div class="form-check">
                                 <input
-                                  class="form-check-input"
+                                  className="form-check-input"
                                   type="radio"
-                                  name="flexRadioDestino"
+                                  name="destino"
+                                  value="quema"
                                   id="flexRadioQuemaDirecta"
-                                  value="Quema"
-                                  checked={destino === "Quema"}
-                                  onChange={handleRadioChange}
+                                  checked={destino === "quema"} // Verifica si el estado coincide
+                                  onChange={(e) => {
+                                    setDestino(e.target.value);
+                                    setIdAlmacen(null); // Limpiar almacén si el destino es quema
+                                  }}
                                 />
                                 <label class="form-check-label" for="flexRadioQuemaDirecta">
                                   Quema directa
@@ -734,13 +887,13 @@ const Inventario = () => {
                               </div>
                               <div class="form-check">
                                 <input
-                                  class="form-check-input"
+                                  className="form-check-input"
                                   type="radio"
-                                  name="flexRadioDestino"
+                                  name="destino"
+                                  value="almacen"
                                   id="flexRadioParaAlmacen"
-                                  value={"Almacen"}
-                                  checked={destino === "Almacen"}
-                                  onChange={handleRadioChange}
+                                  checked={destino === "almacen"} // Verifica si el estado coincide
+                                  onChange={(e) => setDestino(e.target.value)} // Actualiza el estado
                                 />
                                 <label class="form-check-label" for="flexRadioParaAlmacen">
                                   Para almacén
@@ -752,13 +905,14 @@ const Inventario = () => {
                               <select
                                 className="form-select"
                                 id="selectAlmacen"
-                                disabled={destino === "Quema"}>
+                                disabled={destino !== "almacen"}
+                                onChange={(e) => setIdAlmacen(e.target.value)}
+                              >
                                 <option value="">Seleccionar destino</option> {/* Opción por defecto */}
-                                <option value="Quema">Quema directa</option> {/* Opción adicional */}
 
                                 {/* Mapea los almacenes obtenidos */}
                                 {almacenesData.map((almacen) => (
-                                  <option key={almacen.id_almacen} value={almacen.codigo_almacen}>
+                                  <option key={almacen.id_almacen} value={almacen.id_almacen}>
                                     {almacen.nombre_almacen}
                                   </option>
                                 ))}
@@ -793,19 +947,19 @@ const Inventario = () => {
                               <label for="" className="form-label">Proveedor</label>
                               <div className="d-flex w-100 gap-2">
                                 <div style={{ flex: 1 }}>
-                                <input
-              type="text"
-              className="form-control"
-              id="proveedor"
-              value={selectedProveedor ? selectedProveedor.name : ""}
-              readOnly
-              onClick={() => setShowProveedorModal(true)}
-            />
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    id="proveedor"
+                                    value={selectedProveedor ? selectedProveedor.nombre : ""}
+                                    readOnly
+                                    onClick={() => setShowProveedorModal(true)}
+                                  />
                                 </div>
 
-                                <button className="btn btn-primary">
+                                <a className="btn btn-primary">
                                   <FaIcons.FaUserPlus />
-                                </button>
+                                </a>
 
                               </div>
                             </div>
@@ -821,14 +975,14 @@ const Inventario = () => {
                                     type="text"
                                     className="form-control"
                                     placeholder="Nombre del material"
-                                    value={selectedMaterial?.name || ''}
-                                    onClick={abrirModalMaterial}
+                                    value={selectedMaterial ? selectedMaterial.nombre : ""}
+                                    onClick={() => setShowMaterialModal(true)}
                                   />
                                 </div>
 
-                                <button className="btn btn-primary">
+                                <a className="btn btn-primary">
                                   <FaIcons.FaPlus />
-                                </button>
+                                </a>
 
                               </div>
                             </div>
@@ -847,7 +1001,7 @@ const Inventario = () => {
                           </div>
                         </fieldset>
 
-                        <table className="table table-striped">
+                        <table className="table table-striped" id="tablaDetalleCompra">
                           <thead className="table-primary">
                             <tr>
                               <th scope="col">Id.</th>
@@ -875,71 +1029,51 @@ const Inventario = () => {
                             </tr>
                           </tfoot>
                         </table>
+                        <div className="modal-footer">
+                          <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                          <button type="submit" className="btn btn-success">Guardar</button>
+                        </div>
                       </form>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="submit" className="btn btn-success">Guardar</button>
-              </div>
+
             </div>
           </div>
         </div>
         {/* Fin modal de compras  */}
 
-        {/* Modal para seleccionar proveedor */}
-      {/* <ModalSeleccionarProveedor
-        show={showProveedorModal}
-        onHide={() => setShowProveedorModal(false)}
-        onSelectProveedor={handleSelectProveedor}
-      /> */}
+        {/* Modales de selección */}
+        <ModalSeleccionarProveedor
+          show={showProveedorModal}
+          onHide={() => setShowProveedorModal(false)}
+          onSelectProveedor={handleSelectProveedor}
+        />
 
-        {isModalMaterialOpen && (
-          <div className="modal show" tabIndex="-1" style={{ display: 'block' }}>
-            <div className="modal-dialog">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Seleccionar Material</h5>
-                  <button type="button" className="btn-close" onClick={cerrarModalMaterial}></button>
-                </div>
-                <div className="modal-body">
-                  <ul className="list-group">
-                    {filteredMateriales.map((material) => (
-                      <li
-                        key={material.id}
-                        className="list-group-item"
-                        onClick={() => {
-                          setSelectedMaterial(material);
-                          cerrarModalMaterial();
-                          setShouldFocusMaterial(true); // Foco al campo cantidad
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {material.name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <ModalSeleccionarMaterial
+          show={showMaterialModal}
+          onHide={() => setShowMaterialModal(false)}
+          onSelectMaterial={handleSelectMaterial}
+        />
 
 
         {/* Inicio tabla compras */}
         <section className="mt-3">
           {/* <h1>Lista de personal</h1> */}
           <DataTable
-            title="Lista de compras"
+            title="Listado de ingresos de material"
             columns={columnasTablaCompras}
             data={comprasData}
             pagination={true}
             // progressPending={loading}
             highlightOnHover={true}
             responsive={true}
-            noDataComponent="No hay registros de compras"
+            noDataComponent={
+              <div style={{ color: '#ff6347', padding: '20px' }}>
+                No hay registros de ingresos de material.
+              </div>
+            }
             persistTableHead={true}
 
           />
@@ -950,7 +1084,7 @@ const Inventario = () => {
         <div className={`modal ${mostrarModalEliminar ? 'show' : ''}`} tabIndex="-1" style={{ display: mostrarModalEliminar ? 'block' : 'none' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header">
+              <div className="modal-header bg-danger text-white">
                 <h5 className="modal-title">Confirmar Eliminación</h5>
                 <button type="button" className="btn-close" onClick={handleCloseModal} aria-label="Close"></button>
               </div>
