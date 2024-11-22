@@ -619,9 +619,9 @@ const Inventario = () => {
     const compraData = {
       fecha_compra: fechaCompra,
       estado_pago: estadoPago,
-      destino_quema: destino === "quema" ? 1 : 0, // 1 para quema directa, 0 para almacén
-      almacen_id: destino === "almacen" ? idAlmacen : null, // Almacén solo si el destino es para almacén
-      proveedor_id: selectedProveedor.id_proveedor,
+      destino_quema: destino === "quema" ? 0 : 1, // 1 para quema directa, 0 para almacén
+      almacen_id_almacen: destino === "almacen" ? idAlmacen : null, // Almacén solo si el destino es para almacén
+      proveedor_id_proveedor: selectedProveedor.id,
       detalles: detalleComprasData.map((item) => ({
           id_material: item.id_material,
           cantidad: item.cantidad,
@@ -629,6 +629,8 @@ const Inventario = () => {
           subtotal: item.subtotal,
       })),
   };
+
+  console.log(compraData);
 
     try {
       const response = await axios.post(`${config.apiBaseUrl}comprasmateriales/`, compraData, configToken);
@@ -844,6 +846,7 @@ const Inventario = () => {
                             <div className="col-md-3">
                               <label htmlFor="fechaCompra" className="form-label">Fecha de Compra:</label>
                               <input
+                              required
                                 className="form-control"
                                 type="date"
                                 id="fechaCompra"
@@ -905,6 +908,7 @@ const Inventario = () => {
                               <select
                                 className="form-select"
                                 id="selectAlmacen"
+                                value={idAlmacen}
                                 disabled={destino !== "almacen"}
                                 onChange={(e) => setIdAlmacen(e.target.value)}
                               >
