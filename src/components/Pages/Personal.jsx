@@ -6,6 +6,9 @@ import { useState, useEffect } from 'react';
 
 import config from '../../config';
 
+import { Snackbar } from '@mui/material';
+import Alert from '@mui/material/Alert';
+
 const Trabajadores = () => {
 
     //variables para almacenar el estado de los datos de los trabajadores
@@ -22,10 +25,10 @@ const Trabajadores = () => {
     const [fecha_ingreso, setFechaIngreso] = useState('');
     const [estado, setEstado] = useState(1); // Por defecto activo
 
-    // Estados para la alerta
-    const [alertMessage, setAlertMessage] = useState('');
-    const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
-    const [showAlert, setShowAlert] = useState(false); // Controla si mostrar la alerta
+    // Estados para las alertas
+    const [alertMessage, setAlertMessage] = useState(''); // Mensaje a mostrar
+    const [showAlert, setShowAlert] = useState(false);   // Controlar visibilidad del Snackbar
+    const [alertSeverity, setAlertSeverity] = useState('error'); // Severidad del Alert (success o error)
 
 
     const [MostrarModalEliminarTrabajador, setMostrarModalEliminarTrabajador] = useState(false);
@@ -43,10 +46,12 @@ const Trabajadores = () => {
         }
     };
 
+    
+
     //Función para obtener trabajadores desde endpoint
     const fetchPersonalData = async () => {
         try {
-            const response = await axios.get(`${config.apiBaseUrl}personal/`,  configToken);
+            const response = await axios.get(`${config.apiBaseUrl}personal/`, configToken);
 
             setPersonalData(response.data); //Guarda datos en el estado
             setLoading(false); //Cambia el estado de loading a false
@@ -56,9 +61,31 @@ const Trabajadores = () => {
         }
     }
 
+    const validarCamposPersonal = () => {
+        if (dni.length !== 8) {
+            setAlertMessage('El DNI debe tener 8 dígitos.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return false;
+        }
+        if (celular && celular.length !== 9) {
+            setAlertMessage('El celular debe tener 9 dígitos.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return false;
+        }
+        return true; // Todos los campos son válidos
+    };
+
+
     // Función para manejar la sumisión del formulario de trabajador
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevenir el envío del formulario
+
+        // Validar campos antes de proceder
+        if (!validarCamposPersonal()) {
+            return; // Si la validación falla, no continuar
+        }
 
         const trabajadorData = {
             dni,
@@ -87,11 +114,9 @@ const Trabajadores = () => {
             if (response.data && response.data.message) {
                 // Mostrar mensaje de éxito
                 setAlertMessage(isEditing ? 'Trabajador actualizado con éxito.' : 'Trabajador agregado exitosamente.');
-                setAlertType('success'); // Tipo de alerta
+                setAlertSeverity('success'); // Mensaje de éxito
                 setShowAlert(true); // Mostrar la alerta
             }
-
-
 
             // Actualizar tabla después de la operación
             await fetchPersonalData();
@@ -103,18 +128,15 @@ const Trabajadores = () => {
             // Limpiar los campos después de la operación
             resetForm();
 
-            // Mostrar el alert después de cerrar el modal
-            setTimeout(() => {
-                setShowAlert(false); // Ocultar alerta después de 2 segundos
-            }, 2000);
 
         } catch (error) {
             // Mostrar alerta de error
             setAlertMessage('Error: No se ha podido agregar o actualizar el trabajador. ' + error);
-            setAlertType('danger');
+            setAlertSeverity('error'); // Mensaje de éxito
             setShowAlert(true);
         }
     };
+
     const resetForm = () => {
         setDni('');
         setNombreCompleto('');
@@ -288,12 +310,23 @@ const Trabajadores = () => {
 
     return (
         <div className='d-flex'>
-            {/* <Sidebar /> */}
+        <Snackbar
+                open={showAlert}
+                autoHideDuration={3000}
+                onClose={() => setShowAlert(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert severity={alertSeverity} onClose={() => setShowAlert(false)}>
+                    {alertMessage}
+                </Alert>
+            </Snackbar>
+
+           
             <div className='content'>
                 <div className="">
                     {/* Inicio Header Trabajadores */}
                     <div className="d-flex p-2 justify-content-between">
-                        <h3 className="">Personal</h3>
+                        <h3 className="">Gestión de Personal</h3>
                         <div className="d-flex">
 
                             <form className="">
@@ -301,12 +334,12 @@ const Trabajadores = () => {
                                     <div className="col-auto">
                                         <label className="col-form-label form-text">Buscar trabajador:</label>
                                     </div>
-                                    <div className="col-auto">
+                                    <div className="col-auto me-3">
                                         <input type="text" placeholder="Buscar por nombre ..." id="inputPassword6" className="form-control" />
                                     </div>
                                 </div>
                             </form>
-                            <button onClick={handleAddTrabajador} type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTrabajador"><FaIcons.FaUserPlus /> Registrar</button>
+                            <button onClick={handleAddTrabajador} type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTrabajador"><FaIcons.FaUserPlus /> Registrar personal</button>
                         </div>
 
                     </div>
@@ -333,11 +366,12 @@ const Trabajadores = () => {
                                                     }
                                                     }
                                                         required />
+                                                         <div id="dniHelp" class="form-text">Max. 8 dígitos.</div>
                                                 </div>
                                             </div>
                                             <div className='col-8'>
                                                 <div className="mb-3">
-                                                    <label htmlFor="nombreCompleto" className="form-label">Nombre completo</label>
+                                                    <label htmlFor="nombreCompleto" className="form-label">Nombres y Apellidos</label>
                                                     <input type="text" className="form-control" id="nombreCompleto" value={nombre_completo} onChange={(e) => setNombreCompleto(e.target.value)} required />
                                                 </div>
                                             </div>
@@ -361,14 +395,14 @@ const Trabajadores = () => {
                                         <div className='row'>
                                             <div className='col'>
                                                 <div className="mb-3">
-                                                    <label htmlFor="celular" className="form-label">Celular</label>
+                                                    <label htmlFor="celular" className="form-label">Celular <span className='form-text'>(Opcional)</span></label>
                                                     <input type="phone" className="form-control" id="celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
                                                 </div>
                                             </div>
                                             <div className='col'>
                                                 <div className="mb-3">
-                                                    <label htmlFor="pagoDia" className="form-label">Pago por día</label>
-                                                    <input type="number" className="form-control" id="pagoDia" value={pago_dia} onChange={(e) => setPagoDia(e.target.value)} required />
+                                                    <label htmlFor="pagoDia" className="form-label">Pago por día S/.</label>
+                                                    <input placeholder='S/. 00.00' type="number" className="form-control" id="pagoDia" value={pago_dia} onChange={(e) => setPagoDia(e.target.value)} required />
                                                 </div>
                                             </div>
                                         </div>
@@ -382,15 +416,18 @@ const Trabajadores = () => {
                                                         onChange={(e) => setFechaIngreso(e.target.value)} required />
                                                 </div>
                                             </div>
-                                            <div className="col">
-                                                <div className="mb-3">
-                                                    <label htmlFor="estado" className="form-label">Estado</label>
-                                                    <select className="form-select" id="estado" value={estado} onChange={(e) => setEstado(e.target.value)} required>
-                                                        <option value={1}>Activo</option>
-                                                        <option value={0}>Inactivo</option>
-                                                    </select>
+
+                                            {isEditing && ( // Mostrar el select solo si estamos en modo de edición
+                                                <div className="col">
+                                                    <div className="mb-3">
+                                                        <label htmlFor="estado" className="form-label">Estado</label>
+                                                        <select className="form-select" id="estado" value={estado} onChange={(e) => setEstado(e.target.value)} required>
+                                                            <option value={1}>Activo</option>
+                                                            <option value={0}>Inactivo</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
 
                                         </div>
                                         <div className="modal-footer">
@@ -404,12 +441,7 @@ const Trabajadores = () => {
                         </div>
                     </div>
                     {/* Fin modal de trabajador */}
-                    {/* Alertas de éxito o error */}
-                    {showAlert && (
-                        <div className={`alert alert-${alertType} mt-2`} role="alert">
-                            {alertMessage}
-                        </div>
-                    )}
+
                     {/* Inicio tabla Trabajadores */}
                     <section className="mt-3">
                         {/* <h1>Lista de personal</h1> */}
@@ -427,7 +459,11 @@ const Trabajadores = () => {
                             progressPending={loading}
                             highlightOnHover={true}
                             responsive={true}
-                            noDataComponent="No hay registros de trabajadores disponibles"
+                            noDataComponent={
+                                <div style={{ color: '#ff6347', padding: '20px' }}>
+                                    No hay registros de trabajadores disponibles.
+                                </div>
+                            }
                             persistTableHead={true}
                         />
                     </section>
@@ -437,7 +473,7 @@ const Trabajadores = () => {
                     <div className={`modal ${MostrarModalEliminarTrabajador ? 'show' : ''}`} tabIndex="-1" style={{ display: MostrarModalEliminarTrabajador ? 'block' : 'none' }}>
                         <div className="modal-dialog">
                             <div className="modal-content">
-                                <div className="modal-header">
+                                <div className="modal-header bg-danger text-white">
                                     <h5 className="modal-title">Confirmar Eliminación</h5>
                                     <button
                                         type="button"
@@ -459,7 +495,7 @@ const Trabajadores = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        className="btn btn-primary"
+                                        className="btn btn-danger"
                                         onClick={handleConfirmEliminar}
                                     >
                                         Eliminar

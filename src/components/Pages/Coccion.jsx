@@ -6,6 +6,9 @@ import { useState, useEffect } from 'react';
 
 import config from '../../config';
 
+import { Snackbar } from '@mui/material';
+import Alert from '@mui/material/Alert';
+
 const Coccion = () => {
 
     const token = localStorage.getItem('token'); //obtener token de localstorage
@@ -16,7 +19,6 @@ const Coccion = () => {
             'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
         }
     };
-
 
     const [loading, setLoading] = useState(true);
     // Estados para manejar el modal de confirmar eliminar
@@ -56,9 +58,10 @@ const Coccion = () => {
     const [costo_cargo, setCostoCargo] = useState('');
 
     // Estados para las alertas
-    const [alertMessage, setAlertMessage] = useState('');
-    const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
-    const [showAlert, setShowAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState(''); // Mensaje a mostrar
+    const [showAlert, setShowAlert] = useState(false);   // Controlar visibilidad del Snackbar
+    const [alertSeverity, setAlertSeverity] = useState('error'); // Severidad del Alert (success o error)
+
 
     const [mostrarModalHumeador, setMostrarModalHumeador] = useState(false);
     const [trabajadoresSeleccionadosHumeador, setTrabajadoresSeleccionadosHumeador] = useState([]);
@@ -257,7 +260,7 @@ const Coccion = () => {
     const manejarSeleccionHumeador = (trabajador) => {
         if (trabajadoresSeleccionadosHumeador.length >= cantidad_humeadores) {
             setAlertMessage(`Ya se ha alcanzado el límite de ${cantidad_humeadores} humeadores.`);
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
 
             setTimeout(() => {
@@ -304,7 +307,7 @@ const Coccion = () => {
         if (existe) {
             // Si el trabajador ya está en la lista, mostrar un mensaje
             setAlertMessage(`El operador ${trabajador.nombre_completo} ya ha sido seleccionado.`);
-            setAlertType('warning');
+            setAlertSeverity(warning);
             setShowAlert(true);
 
             setTimeout(() => {
@@ -316,7 +319,7 @@ const Coccion = () => {
         // Verificar si se alcanzó el límite de quemadores
         if (trabajadoresSeleccionadosQuemadores.length >= cantidad_quemadores) {
             setAlertMessage(`Ya se ha alcanzado el límite de ${cantidad_quemadores} quemadores.`);
-            setAlertType('danger');
+            setAlertSeverity(warning);
             setShowAlert(true);
 
             setTimeout(() => {
@@ -345,7 +348,7 @@ const Coccion = () => {
         // Validar campos obligatorios
         if (!hornoSeleccionado) {
             setAlertMessage('Debes seleccionar un horno.');
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
             setLoading(false);
             return;
@@ -353,7 +356,7 @@ const Coccion = () => {
 
         if (!fechaEncendido) {
             setAlertMessage('La fecha de encendido es obligatoria.');
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
             setLoading(false);
             return;
@@ -363,7 +366,7 @@ const Coccion = () => {
         // Validar cantidad de humeadores seleccionados
         if (trabajadoresSeleccionadosHumeador.length !== cantidad_humeadores) {
             setAlertMessage(`Debes seleccionar exactamente ${cantidad_humeadores} humeadores.`);
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
             setLoading(false);
             return;
@@ -371,7 +374,7 @@ const Coccion = () => {
         // Validar cantidad de quemadores seleccionados
         if (trabajadoresSeleccionadosQuemadores.length !== Number(cantidad_quemadores)) {
             setAlertMessage(`Debes seleccionar exactamente ${cantidad_quemadores} quemadores.`);
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
             setLoading(false);
             return;
@@ -394,7 +397,7 @@ const Coccion = () => {
                         return {
                             cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
                             abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                           material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
+                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
                             cantidad_usada: trabajador.cantidad_usada || null,
                             personal_id_personal: trabajador.id_personal,
                         };
@@ -405,7 +408,7 @@ const Coccion = () => {
                         return {
                             cargo_coccion_id_cargo_coccion: cargo ? cargo.id_cargo_coccion : null, // Asigna el ID del cargo o null si no se encuentra
                             abastecedor_id_abastecedor: trabajador.abastecedor_id || null,
-                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null, 
+                            material_id_material: selectedMaterial ? selectedMaterial.id_material : null,
                             cantidad_usada: trabajador.cantidad_usada || null,
                             personal_id_personal: trabajador.id_personal,
                         };
@@ -425,7 +428,7 @@ const Coccion = () => {
 
             // Mensaje de éxito
             setAlertMessage(message);
-            setAlertType('success');
+            setAlertSeverity(success)
             setShowAlert(true);
 
             // Limpiar formulario
@@ -451,7 +454,7 @@ const Coccion = () => {
         } catch (error) {
             // Manejar error
             setAlertMessage(error.response?.data?.error || 'Hubo un problema al registrar la cocción. Inténtalo nuevamente.');
-            setAlertType('danger');
+            setAlertSeverity(error);
             setShowAlert(true);
         } finally {
             setLoading(false);
@@ -495,7 +498,22 @@ const Coccion = () => {
 
     // Función para manejar el guardar/Editar un horno
     const handleSubmitHorno = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevenir el envío del formulario
+
+        // Validaciones
+        if (cantidad_humeadores <= 0) {
+            setAlertMessage('Error: La cantidad de humeadores debe ser mayor que 0.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return; // Salir de la función si hay un error
+        }
+
+        if (cantidad_quemadores <= 0) {
+            setAlertMessage('Error: La cantidad de quemadores debe ser mayor que 0.');
+            setAlertSeverity('error');
+            setShowAlert(true);
+            return; // Salir de la función si hay un error
+        }
 
         const hornoData = {
             prefijo,
@@ -503,45 +521,44 @@ const Coccion = () => {
             cantidad_humeadores,
             cantidad_quemadores,
         };
-        // console.log(hornoData);
+
         try {
             let response;
 
-
+            // Verifica si se está editando o creando un nuevo horno
             if (isEditingHorno) {
                 response = await axios.put(`${config.apiBaseUrl}horno/${idHornoSeleccionado}`, hornoData, configToken);
             } else {
                 response = await axios.post(`${config.apiBaseUrl}horno/`, hornoData, configToken);
             }
 
+            // Verifica si hay un mensaje en la respuesta
             if (response.data && response.data.message) {
                 // Mostrar mensaje de éxito
-                setAlertMessage(isEditingHorno ? 'Horno actualizado con éxito.' : 'Horno registrado exitosamente.');
-                setAlertType('success'); // Tipo de alerta
+                setAlertMessage(isEditingHorno ? 'Horno actualizado correctamente.' : 'Horno registrado correctamente.');
+                setAlertSeverity('success'); // Tipo de alerta
                 setShowAlert(true); // Mostrar la alerta
             }
 
             // Actualiza tabla después de la operación
             await fetchHornosnData();
 
-            // Limpiar los campos despues de la operación
+            // Limpiar los campos después de la operación
             resetFormHorno();
 
-            // Mostrar el alert después de cerrar el modal
-            setTimeout(() => {
-                setShowAlert(false); // Ocultar alerta después de 2 segundos
-            }, 2000);
         } catch (error) {
+            console.error('Error al registrar el horno: ', error);
+
             // Mostrar alerta de error
-            setAlertMessage('Error: No se ha podido agregar o actualizar el horno. ' + error);
-            setAlertType('danger');
-            setShowAlert(true);
+            setAlertMessage('Error: No se ha podido registrar el horno. ' + error.message); // Mensaje de error
+            setAlertSeverity('error'); // Tipo de alerta
+            setShowAlert(true); // Mostrar la alerta
         }
     };
 
     const handleEditHorno = (row) => {
         setIsEditingHorno(true); //Activar modo editar
-        console.log(row);
+        // console.log(row);
 
         // Cargar datos en los inputs
         setIdHornoSeleccionado(row.id_horno);
@@ -577,43 +594,41 @@ const Coccion = () => {
 
     // Funcion para manejar registro/actualizacion de cargos de coccion
     const handleSubmitCargo = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevenir el envío del formulario
 
         const cargoData = {
             nombre_cargo,
             costo_cargo
         };
         console.log(cargoData);
+
         try {
             let response;
 
+            // Enviar datos a la API según si se está editando o creando un nuevo cargo
             if (isEditingCargo) {
                 response = await axios.put(`${config.apiBaseUrl}cargoCoccion/${idCargoSeleccionado}`, cargoData, configToken);
             } else {
                 response = await axios.post(`${config.apiBaseUrl}cargoCoccion/`, cargoData, configToken);
             }
 
+            // Mostrar mensaje de éxito si se recibe una respuesta con mensaje
             if (response.data && response.data.message) {
-                // Mostrar mensaje de éxito
                 setAlertMessage(isEditingCargo ? 'Cargo actualizado con éxito.' : 'Cargo registrado exitosamente.');
-                setAlertType('success'); // Tipo de alerta
+                setAlertSeverity('success'); // Asegúrate de que 'success' sea una cadena válida
                 setShowAlert(true); // Mostrar la alerta
             }
 
             // Actualiza tabla después de la operación
             await fetchCargoCoccionData();
 
-            // Limpiar los campos despues de la operación
+            // Limpiar los campos después de la operación
             resetFormCargo();
 
-            // Mostrar el alert después de cerrar el modal
-            setTimeout(() => {
-                setShowAlert(false); // Ocultar alerta después de 2 segundos
-            }, 2000);
         } catch (error) {
             // Mostrar alerta de error
-            setAlertMessage('Error: No se ha podido agregar o actualizar el cargo. ' + error);
-            setAlertType('danger');
+            setAlertMessage('Error: No se ha podido agregar o actualizar el cargo. ' + error.message); // Utiliza error.message para mostrar un mensaje más claro
+            setAlertSeverity('error'); // Asegúrate de que 'error' sea una cadena válida
             setShowAlert(true);
         }
     };
@@ -729,6 +744,7 @@ const Coccion = () => {
             } else if (entidadAEliminar === 'coccion') {
                 url = `${config.apiBaseUrl}coccion/${idAEliminar}`;
             }
+
             // Llamar a la API para eliminar el registro
             await axios.delete(url, configToken);
 
@@ -742,10 +758,21 @@ const Coccion = () => {
             }
 
             resetFormHorno();
+
+            // Mostrar mensaje de éxito
+            setAlertMessage('Registro eliminado correctamente.');
+            setAlertSeverity('success'); // Tipo de alerta
+            setShowAlert(true); // Mostrar la alerta
+
             // Cerrar modal
             handleCloseModal();
         } catch (error) {
             console.error(`Error al eliminar ${entidadAEliminar}: `, error);
+
+            // Mostrar alerta de error
+            setAlertMessage('Error: No se ha podido eliminar el registro. ' + error.message); // Mensaje de error
+            setAlertSeverity('error'); // Tipo de alerta
+            setShowAlert(true); // Mostrar la alerta
         }
     };
 
@@ -763,14 +790,21 @@ const Coccion = () => {
 
     return (
         <div className='d-flex'>
+
+            {/* Snackbar para alerts */}
+            <Snackbar
+                open={showAlert}
+                autoHideDuration={3000}
+                onClose={() => setShowAlert(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert severity={alertSeverity} onClose={() => setShowAlert(false)}>
+                    {alertMessage}
+                </Alert>
+            </Snackbar>
+
             {/* <Sidebar /> */}
             <div className='content'>
-                {/* Alertas de éxito o error */}
-                {showAlert && (
-                    <div className={`alert alert-${alertType} mt-2 position-fixed top-0 start-50 translate-middle-x`} role="alert" style={{ zIndex: 1060 }} >
-                        {alertMessage}
-                    </div>
-                )}
                 <div className="">
                     {/* Inicio Header cocción */}
                     <div className="d-flex p-2 justify-content-between">
@@ -781,7 +815,7 @@ const Coccion = () => {
                     </div>
                     <div className='d-flex'>
                         <button className='btn btn-warning me-2' data-bs-toggle="modal" data-bs-target="#modalHornos"><FaIcons.FaIndustry /> Hornos</button>
-                        <button className='btn btn-warning' data-bs-toggle="modal" data-bs-target="#modalCargoCoccion"><FaIcons.FaUserCog /> Cargos en cocción</button>
+                        <button className='btn btn-warning' data-bs-toggle="modal" data-bs-target="#modalCargoCoccion"><FaIcons.FaUserCog /> Cargos de cocción</button>
                     </div>
                     {/* Fin Header cocción */}
 
@@ -796,7 +830,7 @@ const Coccion = () => {
                                 <div className="modal-body">
                                     <div className="container">
                                         <div className="row">
-                                            <div className="col-12 col-md-5">
+                                            <div className="col-12 col-md-4">
                                                 <form onSubmit={handleSubmitHorno}>
                                                     <div className="mb-3">
                                                         <label htmlFor="InputIdHorno" className="form-label">Id.</label>
@@ -808,7 +842,7 @@ const Coccion = () => {
                                                             <label htmlFor="InputCodHorno" className="form-label">Cod. Horno</label>
                                                             <input type="text" className="form-control" id="InputCodHorno" aria-describedby="codHelp"
                                                                 value={prefijo}
-                                                                onChange={(e) => setPrefijo(e.target.value)} required
+                                                                onChange={(e) => setPrefijo(e.target.value.toUpperCase())} required
                                                             />
                                                             <div id="codHelp" className="form-text">Prefijo para identificar un horno.</div>
 
@@ -845,7 +879,7 @@ const Coccion = () => {
 
                                                 </form>
                                             </div>
-                                            <div className="col-12 col-md-7">
+                                            <div className="col-12 col-md-8">
                                                 <DataTable
                                                     title="Lista de hornos"
                                                     columns={columnsHornos}
@@ -854,7 +888,11 @@ const Coccion = () => {
                                                     progressPending={loading}
                                                     highlightOnHover={true}
                                                     responsive={true}
-                                                    noDataComponent="No hay registros de hornos disponibles"
+                                                    noDataComponent={
+                                                        <div style={{ color: '#ff6347', padding: '20px' }}>
+                                                            No hay registros de hornos disponibles.
+                                                        </div>
+                                                    }
                                                     persistTableHead={true}
                                                 />
                                             </div>
@@ -881,7 +919,7 @@ const Coccion = () => {
                                 <div className="modal-body">
                                     <div className="container">
                                         <div className="row">
-                                            <div className="col-12 col-md-6">
+                                            <div className="col-12 col-md-4">
                                                 <form onSubmit={handleSubmitCargo}>
                                                     <div className="mb-3">
                                                         <label htmlFor="InputIdCargoCoccion" className="form-label">Id.</label>
@@ -889,26 +927,30 @@ const Coccion = () => {
                                                     </div>
                                                     <div className="mb-3">
                                                         <label htmlFor="Nombre" className="form-label">Nombre</label>
-                                                        <input type="text" className="form-control" value={nombre_cargo} onChange={(e) => setNombreCargo(e.target.value)} />
-                                                        <div id="" className="form-text">Nombre del cargo del operador en cocción.</div>
+                                                        <input type="text" className="form-control" value={nombre_cargo} onChange={(e) => setNombreCargo(e.target.value)} required />
+                                                        <div id="" className="form-text">Nombre para el cargo en cocción.</div>
                                                     </div>
                                                     <div className="mb-3">
                                                         <label htmlFor="InputCostoCargoCoccion" className="form-label">Costo S/.</label>
-                                                        <input type="number" className="form-control" value={costo_cargo} onChange={(e) => setCostoCargo(e.target.value)} id="InputCostoCargoCoccion" />
+                                                        <input type="number" className="form-control" value={costo_cargo} onChange={(e) => setCostoCargo(e.target.value)} id="InputCostoCargoCoccion" required />
                                                     </div>
                                                     <button type="submit" className="btn btn-primary">{isEditingCargo ? 'Actualizar' : 'Registrar'}</button>
                                                 </form>
                                             </div>
-                                            <div className="col-12 col-md-6">
+                                            <div className="col-12 col-md-8">
                                                 <DataTable
-                                                    title="Lista de cargos en cocción"
+                                                    title="Listado de cargos de cocción"
                                                     columns={columnsCargosCoccion}
                                                     data={cargoCoccionData}
                                                     pagination={false}
                                                     progressPending={loading}
                                                     highlightOnHover={true}
                                                     responsive={true}
-                                                    noDataComponent="No hay registros de cargos disponibles"
+                                                    noDataComponent={
+                                                        <div style={{ color: '#ff6347', padding: '20px' }}>
+                                                            No hay registros de cargos de cocción.
+                                                        </div>
+                                                    }
                                                     persistTableHead={true}
                                                 />
                                             </div>
@@ -1149,7 +1191,7 @@ const Coccion = () => {
                             <div className="modal-dialog modal-dialog-centered">
                                 <div className="modal-content">
                                     <div className="modal-header bg-primary text-white">
-                                        <h5 className="modal-title">Seleccionar Material</h5>
+                                        <h5 className="modal-title w-100 text-center">Seleccionar Material</h5>
                                         <button
                                             type="button"
                                             className="btn-close"
@@ -1169,7 +1211,7 @@ const Coccion = () => {
                                                 </div>
                                             ))
                                         ) : (
-                                            <p>No hay materiales disponibles.</p>
+                                            <p className='mb-0 text-center' style={{ color: '#ff6347', padding: '20px' }}>No hay materiales disponibles.</p>
                                         )}
                                     </div>
                                     <div className="modal-footer">

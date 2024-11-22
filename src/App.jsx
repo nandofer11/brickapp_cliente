@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Landing from './components/Landing/Landing';
 import Login from './components/Login/Login';
+import Registro from './components/Registro/Registro';
 import FullLayout from './layouts/FullLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -23,6 +24,7 @@ function App() {
           {/* Rutas públicas */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
 
           {/* Rutas protegidas envueltas en el componente FullLayout */}
           <Route element={<ProtectedRoute />}>

@@ -5,13 +5,12 @@ const Inicio = ()=>{
    return (
        <div>
            <h1>Inicio</h1>
-           {user.nombreCompleto && (
-               <div>
-                   <h2>Bienvenido, {user.nombreCompleto}</h2>
-                   <p>Rol: {user.rol.nombre}</p>
-                   <p>Empresa: {user.empresa.razonSocial}</p> {/* Cambia esto por la información de la empresa si es necesario */}
+           <div>
+                   <h3 className="my-5">Bienvenido</h3>
+                   <p className="mb-0"><strong>Nombre completo:</strong>{user.nombreCompleto}</p>
+                   <p className="mb-0"><strong>Rol:</strong> {user.rol.nombre}</p>
+                   <p><strong>Empresa:</strong> {user.empresa.razonSocial}</p> {/* Cambia esto por la información de la empresa si es necesario */}
                </div>
-           )}
        </div>
    );
 }
