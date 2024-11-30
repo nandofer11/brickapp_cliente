@@ -17,8 +17,9 @@ export const AuthProvider = ({ children }) => {
         }
     }, [token]);
 
-    const login = (userToken) => {
+    const login = (userToken, user) => {
         localStorage.setItem('token', userToken);
+        localStorage.setItem('user', JSON.stringify(user)); // Guardar el usuario completo
         setToken(userToken);
         setIsAuthenticated(true);
     };

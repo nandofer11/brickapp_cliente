@@ -41,6 +41,12 @@ const Sidebar = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const { isAuthenticated, token } = useContext(AuthContext);
+
+    // Obtener el rol del usuario desde el localStorage o AuthContext
+    const user = JSON.parse(localStorage.getItem('user'));
+    const rol = user ? user.rol.nombre : '';
+
     const handleLogout = () => {
         logout(); // Llama al método logout del contexto
         navigate('/login'); // Redirige a la página de login
@@ -69,10 +75,10 @@ const Sidebar = () => {
                         <p className='parrafoBtnMonitor'>Cocción en tiempo real</p>
                     </div>
                 </NavLink>
-                <nav className=''>
-                    <ul>
-                        {
-                            navigation.map((item, index) => (
+                {rol !== 'Operador' && (
+                    <nav className=''>
+                        <ul>
+                            {navigation.map((item, index) => (
                                 <li key={index} className='sidenav_bg'>
                                     <Link to={item.href}
                                         className={location.pathname === item.href
@@ -83,10 +89,10 @@ const Sidebar = () => {
                                         <span className='ms-3 d-inline-block'>{item.titulo}</span>
                                     </Link>
                                 </li>
-                            ))
-                        }
-                    </ul>
-                </nav>
+                            ))}
+                        </ul>
+                    </nav>
+                )}
 
                 <button onClick={handleLogout} className="btn btn-outline-light mt-5">Cerrar Sesión</button>
 

@@ -12,14 +12,14 @@ import Alert from '@mui/material/Alert';
 
 
 const Inventario = () => {
-  // const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   // Estados para manejar el modal de confirmar eliminar
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [entidadAEliminar, setEntidadAEliminar] = useState({ tipo: '', id: null });
   const [idAEliminar, setIdAEliminar] = useState(null);
 
   //ESTADOS PARA INVENTARIO
-  const [comprasData, setInventariolData] = useState([]);
+
 
   // ESTADOS PARA ALMACENES
   const [isEditingAlmacen, setIsEditingAlmacen] = useState(false);
@@ -36,6 +36,7 @@ const Inventario = () => {
   const [idMaterial, setIdMaterial] = useState(null);
 
   // ESTADOS PARA COMPRAS DE MATERIAL
+  const [comprasData, setComprasData] = useState([]);
   const [fechaCompra, setFechaCompra] = useState('');
   const [estadoPago, setEstadoPago] = useState('');
   const [detalleComprasData, setDetalleComprasData] = useState([]);
@@ -68,44 +69,52 @@ const Inventario = () => {
     }
   };
 
+  // "Destino": "Almacén",
+  //       "Nombre Almacén": "Almacen principal",
+  //       "Proveedor": "Test Proveedor",
+  //       "Tipo Documento": "DNI",
+  //       "Nro Documento": "2047592199",
+  //       "Cantidad": 400,
+  //       "Precio Unitario": 12,
+  //       "Subtotal": 4800,
+  //       "Material": "cascarilla de arroz",
+  //       "Presentación Material": "Sacos normales"
 
   // Configurar columnas para la tabla de compras de material
   const columnasTablaCompras = [
     {
-      name: 'Cod. Horno',
-      selector: row => row.prefijo,
-      maxWidth: '50px'
-
+      name: "ID",
+      selector: row => row['ID Compra'],
+      width: '60px',
     },
     {
-      name: 'Estado',
-      selector: row => row.estado,
-      cell: row => renderEstadoCoccionBadge(row.estado),
-      sortable: true,
+      name: 'Fecha compra',
+      selector: row => row['Fecha Compra']
     },
     {
-      name: 'Acciones',
-      cell: (row) => (
-        <div className="d-flex">
-          {/* Botón de Editar */}
-          <button className="btn btn-light btn-sm me-2" onClick={() => handleViewDetalles(row)}>
-            <FaIcons.FaEye /> {/* Icono de editar */}
-          </button>
-
-          {/* Botón de Editar */}
-          <button className="btn btn-warning btn-sm me-2">
-            <FaIcons.FaEdit /> {/* Icono de editar */}
-          </button>
-
-          {/* Botón de Eliminar */}
-          <button className="btn btn-danger btn-sm">
-            <FaIcons.FaTrashAlt /> {/* Icono de eliminar */}
-          </button>
-        </div>
-      ),
-      ignoreRowClick: true, // Ignorar el click de la fila en esta columna
-      // allowOverflow: true,
-      button: true, // Indicar que es un botón
+      name: "Estado de pago",
+      cell: row => renderEstadoPagoBadge(row['Estado Pago']), 
+      // selector: row => ,
+    },
+    {
+      name: "Destino",
+      selector: row => row['Destino'],
+    },
+    {
+      name: "Proveedor",
+      selector: row => row['Proveedor'],
+    },
+    {
+      name: "Cant.",
+      selector: row => row['Cantidad'],
+    },
+    {
+      name: "P. de compra S/.",
+      selector: row =>parseFloat(row['Precio Unitario']).toFixed(2),
+    },
+    {
+      name: "Subtotal S/.",
+      selector: row => parseFloat(row['Subtotal']).toFixed(2), 
     }
   ];
 
@@ -174,6 +183,15 @@ const Inventario = () => {
       button: true, // Indicar que es un botón
     }
   ];
+
+   // Función para mostrar el badge según el estado del personal
+   const renderEstadoPagoBadge = (estado) => {
+    if (estado === "Cancelado") {
+        return <span className="badge bg-success">Cancelado</span>;
+    } else {
+        return <span className="badge bg-danger">Pendiente</span>;
+    }
+};
 
   /*** INICIO DE FUNCIONES PARA BÚSQUEDA Y SELECCIÓN ***/
   // Función para buscar proveedores
@@ -274,25 +292,21 @@ const Inventario = () => {
               <button type="button" className="btn-close" onClick={onHide}></button>
             </div>
             <div className="modal-body">
-              {materiales.length === 0 ? (
-                <p>No hay materiales disponibles.</p> // Mensaje si no hay materiales
-              ) : (
-                <ul className="list-group">
-                  {materiales.map((material) => (
-                    <li
-                      key={material.id_material} // Asegúrate de usar el id_material
-                      className="list-group-item"
-                      onClick={() => {
-                        onSelectMaterial(material);
-                        onHide();
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {material.nombre} - {material.presentacion}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <ul className="list-group">
+                {materiales.map((material) => (
+                  <li
+                    key={material.id_material} // Asegúrate de usar el id_material
+                    className="list-group-item"
+                    onClick={() => {
+                      onSelectMaterial(material);
+                      onHide();
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {material.nombre} - {material.presentacion}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
@@ -438,14 +452,16 @@ const Inventario = () => {
   /*** INICIO DE FUNCIONES PARA MATERIAL ***/
   //Obtener todos los materiales
   const obtenerMateriales = async () => {
-    try {
-      const response = await axios.get(`${config.apiBaseUrl}material/`, configToken);
-      return response.data; // Retorna los datos obtenidos
-    } catch (error) {
-      console.error("Error al obtener materiales:", error);
-      throw error; // Lanza el error para que pueda ser manejado por el llamador
-    }
-  }
+    const response = await fetch(`${config.apiBaseUrl}material/`, configToken);
+    const data = await response.json();
+    setMaterialesData(data)
+    return data.map((material) => ({
+      id_material: material.id_material,
+      nombre: material.nombre,
+      presentacion: material.presentacion
+
+    }));
+  };
 
   // Registrar material
   const handleSubmitMaterial = async (e) => {
@@ -520,6 +536,21 @@ const Inventario = () => {
     setIdAEliminar(null);
   };
 
+  const fetchComprasConDetalles = async () => {
+    try {
+      const response = await axios.post(
+        `${config.apiBaseUrl}comprasmateriales/obtenercompradetalles`, 
+        {}, // Cuerpo vacío
+        configToken // Configuración del encabezado
+    );
+      setComprasData(response.data);
+      setLoading(false); //Cambia el estado de loading a false
+    } catch (error) {
+      console.error("Error al obtener los datos de cocciones: ", error);
+      setLoading(false);
+    }
+  }
+
   // Confirmar la eliminación
   const handleConfirmEliminar = async () => {
     try {
@@ -542,7 +573,7 @@ const Inventario = () => {
         obtenerMateriales();
         resetFormMaterial();
       } else if (entidadAEliminar === 'compra') {
-        fetchCoccionData();
+        fetchComprasConDetalles();
       }
 
 
@@ -558,6 +589,8 @@ const Inventario = () => {
 
   // activar el evento cuando el modal es mostrado
   useEffect(() => {
+    fetchComprasConDetalles();
+
     fetchAlmacenesData();
     obtenerMateriales();
 
@@ -619,22 +652,22 @@ const Inventario = () => {
     const compraData = {
       fecha_compra: fechaCompra,
       estado_pago: estadoPago,
-      destino_quema: destino === "quema" ? 0 : 1, // 1 para quema directa, 0 para almacén
+      destino_quema: destino === "quema" ? 1 : 0, // 0 para quema directa, 1 para almacén
       almacen_id_almacen: destino === "almacen" ? idAlmacen : null, // Almacén solo si el destino es para almacén
       proveedor_id_proveedor: selectedProveedor.id,
       detalles: detalleComprasData.map((item) => ({
-          id_material: item.id_material,
-          cantidad: item.cantidad,
-          precio_unitario_compra: item.precioCompra,
-          subtotal: item.subtotal,
+        id_material: item.id_material,
+        cantidad: item.cantidad,
+        precio_unitario_compra: item.precioCompra,
+        subtotal: item.subtotal,
       })),
-  };
+    };
 
-  console.log(compraData);
+    console.log(compraData);
 
     try {
       const response = await axios.post(`${config.apiBaseUrl}comprasmateriales/`, compraData, configToken);
-      if(response.data && response.data.message){
+      if (response.data && response.data.message) {
 
         setAlertMessage('Compra registrada con éxito.');
         setAlertSeverity('success');
@@ -643,7 +676,7 @@ const Inventario = () => {
 
       // Reiniciar los campos del formulario
       resetFormularioCompra();
-    
+
     } catch (error) {
       setAlertMessage('Ocurrió un error al registrar la compra.');
       setAlertSeverity('error');
@@ -690,7 +723,7 @@ const Inventario = () => {
         {/* Fin Header cocción */}
 
         {/* Inicio modal de almacenes */}
-        <div className="modal fade" id="modalAlmacenes" aria-labelledby="tituloModalAlmacenes" aria-hidden="true">
+        <div className="modal fade" id="modalAlmacenes" >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header bg-primary text-white">
@@ -846,7 +879,7 @@ const Inventario = () => {
                             <div className="col-md-3">
                               <label htmlFor="fechaCompra" className="form-label">Fecha de Compra:</label>
                               <input
-                              required
+                                required
                                 className="form-control"
                                 type="date"
                                 id="fechaCompra"
@@ -1070,7 +1103,7 @@ const Inventario = () => {
             columns={columnasTablaCompras}
             data={comprasData}
             pagination={true}
-            // progressPending={loading}
+            progressPending={loading}
             highlightOnHover={true}
             responsive={true}
             noDataComponent={

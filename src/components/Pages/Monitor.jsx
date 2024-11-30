@@ -1,446 +1,306 @@
-import { LineChart } from '@mui/x-charts';
-
-
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-
 import config from '../../config';
-import iconTemp from '../../assets/images/icon_temp.png';
-import iconTime from '../../assets/images/icon_time.png';
-import iconSack from '../../assets/images/icon_sack.png';
+import "../../App.css";
 
-import "../../App.css"
-import * as FaIcons from 'react-icons/fa';
+import { Snackbar } from '@mui/material';
+import Alert from '@mui/material/Alert';
 
-const Monitor = () => {
+import WrapperMonitor from '../WrapperMonitor/WrapperMonitor';
 
-    const token = localStorage.getItem('token'); // Obtener token de localstorage
-    const configToken = {
-        headers: {
-            'Authorization': `Bearer ${token}`, // Envía el token en el encabezado
-        }
-    };
+const Monitor = ({ idCoccion, personalId, materialId }) => {
+    const [historialConsumos, setHistorialConsumos] = useState([]);
+    const [operadores, setOperadores] = useState([]);
+    const [selectedOperador, setSelectedOperador] = useState(null);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+
+    const [coccionesSinIniciar, setCoccionesSinIniciar] = useState([]);
+    const [coccionesIniciadas, setCoccionesIniciadas] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [modalType, setModalType] = useState(""); // "iniciarQuema" | "finalizarCoccion"
+    const [selectedCoccion, setSelectedCoccion] = useState(null);
 
     // Estados para las alertas
-    const [alertMessage, setAlertMessage] = useState('');
-    const [alertType, setAlertType] = useState(''); // 'success' o 'danger'
-    const [showAlert, setShowAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState(''); // Mensaje a mostrar
+    const [showAlert, setShowAlert] = useState(false);   // Controlar visibilidad del Snackbar
+    const [alertSeverity, setAlertSeverity] = useState('error'); // Severidad del Alert (success o error)
 
-    const [coccionEnCurso, setCoccionEnCurso] = useState(null);
 
-    // Para controlar si mostrar el monitor
-    const [showMonitor, setShowMonitor] = useState(false);
+    const [showWrapper, setShowWrapper] = useState(false);
+const [currentCoccion, setCurrentCoccion] = useState(null);
 
-    const [registros, setRegistros] = useState([]); // Estado para los registros de temperatura
+    const token = localStorage.getItem('token');
 
-    const [isHumeada, setIsHumeada] = useState(false);
-    const [isQuema, setIsQuema] = useState(false);
-
-    // Estado para el modal de agregar cantidad
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedOperator, setSelectedOperator] = useState(null);
-    const [cantidad, setCantidad] = useState('');
-
-    const openModal = (operador) => {
-        setSelectedOperator(operador);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setCantidad('');
-        setSelectedOperator(null);
-    };
-
-    const handleRegisterCantidad = async () => {
-        try {
-            const response = await axios.post(`${config.apiBaseUrl}detalle_coccion`, {
-                operadorId: selectedOperator.id, // Asegúrate de tener el ID del operador
-                cantidad: cantidad,
-            });
-            if (response.status === 200) {
-                alert('Cantidad registrada con éxito');
-                closeModal(); // Cerrar modal después de registrar
-            }
-        } catch (error) {
-            console.error('Error al registrar cantidad:', error);
-            alert('Error al registrar cantidad');
+    const configToken = {
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
     };
-    
-    // Función para consultar la cocción en curso
-    const handleVerCoccion = async () => {
-        setIsLoading(true);
-        setError('');
-        try {
-            const response = await axios.get(`${config.apiBaseUrl}coccion/horno/H2/encurso`, configToken);
-            if (response.data) {
-                const { humeada, quema } = response.data;
-                setCoccionEnCurso(response.data);
-
-                // Validar estados de humeada y quema
-                setIsHumeada(humeada === 1);
-                setIsQuema(quema === 1);
-
-                if (humeada === 1 || quema === 1) {
-                    await obtenerRegistrosCoccion(response.data.id_coccion);
-                    setShowMonitor(true);
-                }
-            } else {
-                setCoccionEnCurso(null);
-                setShowMonitor(false);
-            }
-        } catch (error) {
-            console.error('Error al consultar la base de datos:', error);
-            setError('Error al consultar los datos');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleVer = (idCoccion) => {
+        setCurrentCoccion(idCoccion);
+        setShowWrapper(true);
     };
 
-    // Función para transformar los registros
-    const transformarRegistros = (registros) => {
-        return registros.map((registro) => ({
-            x: registro.hora,       // Usar la hora como el eje X
-            y: registro.temperatura // Usar la temperatura como el eje Y
-        }));
-    };
-
-    // Función para obtener registros de temperatura
-    const obtenerRegistrosCoccion = async (idCoccion) => {
-        try {
-            const response = await axios.get(`${config.apiBaseUrl}coccion/${idCoccion}/registros`, configToken);
-            console.log("Registros de temperatura:", response.data); // Mostrar datos en consola
-            const datosTransformados = transformarRegistros(response.data);
-            setRegistros(datosTransformados); // Guardar los registros en el estado, si es necesario
-        } catch (error) {
-            console.error('Error al obtener registros de cocción:', error);
-        }
+    // Obtener cocciones al cargar el componente
+    const fetchCocciones = () => {
+        axios.get(`${config.apiBaseUrl}coccion/`, configToken)
+            .then(response => {
+                const sinIniciar = response.data.filter(
+                    coccion => coccion.estado === 'En curso' && coccion.humeada === 0 && coccion.quema === 0
+                );
+                const iniciadas = response.data.filter(
+                    coccion => coccion.estado === 'En curso' && coccion.humeada === 1
+                );
+                setCoccionesSinIniciar(sinIniciar);
+                setCoccionesIniciadas(iniciadas);
+            })
+            .catch(error => console.error('Error al obtener cocciones:', error));
     };
 
     useEffect(() => {
-        let isMounted = true;
-        handleVerCoccion().finally(() => {
-            if (isMounted) setIsLoading(false);
-        });
-        return () => {
-            isMounted = false;
+        fetchCocciones();
+
+        const fetchHistorialConsumos = async () => {
+            if (idCoccion && personalId && materialId) { // Asegúrate de que estos valores estén definidos
+                try {
+                    const response = await axios.get(
+                        `${config.apiBaseUrl}coccion/${idCoccion}/${personalId}/${materialId}/consumosdematerial`,
+                        configToken
+                    );
+                    setHistorialConsumos(response.data);
+                } catch (error) {
+                    console.error("Error al obtener el historial de consumos:", error);
+                }
+            }
         };
-    }, []);
-    
 
-    // Agrega otro useEffect para actualizar el wrapper_monitor cuando cambien los estados de humeada o quema
-
-    useEffect(() => {
-        if (coccionEnCurso) {
-            setIsHumeada(coccionEnCurso.humeada === 1);
-            setIsQuema(coccionEnCurso.quema === 1);
-        }
-    }, [coccionEnCurso]); // Se ejecuta cada vez que coccionEnCurso cambia
-
-    const actualizarEstadoCoccion = async (campo, valor) => {
-        try {
-            const response = await axios.put(
-                `${config.apiBaseUrl}coccion/iniciarcoccion/${coccionEnCurso.id_coccion}`,
-                { campo, valor }, // Campo y valor a actualizar
-                configToken
-            );
-    
-            if (response.status === 200) {
-                setAlertMessage(`${campo === 'humeada' ? 'Humeada' : 'Quema'} iniciada con éxito.`);
-                setAlertType('success');
-                setShowAlert(true);
-                setTimeout(() => setShowAlert(false), 3000);
-    
-                // Actualiza la cocción en curso después del cambio
-                const updatedCoccion = await axios.get(`${config.apiBaseUrl}coccion/${coccionEnCurso.id_coccion}`, configToken);
-                if (updatedCoccion.status === 200) {
-                    setCoccionEnCurso(updatedCoccion.data); // Actualiza el estado de la cocción
-    
-                    // Aquí puedes llamar a obtenerRegistrosCoccion si es necesario
-                    await obtenerRegistrosCoccion(updatedCoccion.data.id_coccion);
-                }
-                setShowMonitor(true);
+        const fetchOperadores = async () => {
+            try {
+                const response = await axios.get(`${config.apiBaseUrl}coccion/${idCoccion}/operadores`, configToken);
+                setOperadores(response.data.operadores);
+            } catch (error) {
+                console.error('Error al cargar operadores:', error);
             }
-        } catch (error) {
-            setAlertMessage(`Error al iniciar la ${campo === 'humeada' ? 'humeada' : 'quema'}.`);
-            setAlertType('danger');
-            setShowAlert(true);
-            setTimeout(() => setShowAlert(false), 3000);
-            console.error('Error:', error);
-        }
+        };
+
+        fetchOperadores();
+
+        fetchHistorialConsumos();
+    }, [idCoccion, personalId, materialId]);
+
+    // Iniciar cocción
+    const handleIniciarCoccion = (idCoccion) => {
+        setSelectedCoccion(idCoccion);
+        setModalType("iniciarCoccion");
+        setShowModal(true);
     };
 
-    // Funcion para finalizar el proceso de coccion
-    const finalizarCoccion = async () => {
+    const confirmIniciarCoccion = () => {
+        axios.put(`${config.apiBaseUrl}coccion/${selectedCoccion}/iniciarhumeada`, {}, configToken)
+            .then(() => {
 
-        try {
-            const response = await axios.put(`${config.apiBaseUrl}coccion/finalizar_coccion/${coccionEnCurso.id_coccion}`, {}, configToken);
-
-            if (response.status === 200) {
-                setAlertMessage('Cocción finalizada con éxito');
-                setAlertType('success');
+                setAlertMessage('Cocción iniciada con éxito.');
+                setAlertSeverity('success');
                 setShowAlert(true);
-                setTimeout(() => setShowAlert(false), 3000);
 
-                setCoccionEnCurso(null); // Opcional: Si deseas limpiar el estado después de finalizar la cocción
-                setShowMonitor(false); // Opcional: Ocultar el monitor después de finalizar la cocción
-            }
-        } catch (error) {
-            setAlertMessage('Error al finalizar la cocción');
-            setAlertType('danger');
-            setShowAlert(true);
-            setTimeout(() => setShowAlert(false), 3000);
-            console.error('Error:', error);
-        }
+                setShowModal(false);
+                fetchCocciones();
+            })
+            .catch(error => console.error('Error al iniciar cocción:', error));
     };
 
+    // Iniciar quema
+    const handleIniciarQuema = (idCoccion) => {
+        setSelectedCoccion(idCoccion);
+        setModalType("iniciarQuema");
+        setShowModal(true);
+    };
 
+    const confirmIniciarQuema = () => {
+        axios.put(`${config.apiBaseUrl}coccion/${selectedCoccion}/iniciarquema`, {}, configToken)
+            .then(() => {
+                // alert('Quema iniciada con éxito');
+                setAlertMessage('Quema iniciada con éxito.');
+                setAlertSeverity('success');
+                setShowAlert(true);
+                
+                setShowModal(false);
+                fetchCocciones();
+            })
+            .catch(error => console.error('Error al iniciar quema:', error));
+    };
 
-    // Filtrar y mapear los datos
-    const filteredDataset = registros
-        .filter((registro) => registro.sensor_id_sensor === 1) // Filtra por sensor_id_sensor
-        .map((registro) => ({
-            x: registro.hora, // Usa la hora como el eje X
-            y: registro.temperatura, // Usa la temperatura como el eje Y
-        }));
+    // Finalizar cocción
+    const handleFinalizarCoccion = (idCoccion) => {
+        setSelectedCoccion(idCoccion);
+        setModalType("finalizarCoccion");
+        setShowModal(true);
+    };
+
+    const confirmFinalizarCoccion = () => {
+        axios.put(`${config.apiBaseUrl}coccion/${selectedCoccion}/finalizarcoccion`, {}, configToken)
+            .then(() => {
+                // alert('Cocción finalizada con éxito');
+                setAlertMessage('Cocción finalizada con éxito.');
+                setAlertSeverity('success');
+                setShowAlert(true);
+
+                setShowModal(false);
+                fetchCocciones();
+            })
+            .catch(error => console.error('Error al finalizar cocción:', error));
+    };
+
+    const formatFecha = (fecha) => {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+};
 
     return (
-        <div className='d-flex'>
-            <div className='content container'>
-                <h3>Monitoreo del proceso</h3>
-                <div className="d-flex justify-content-between align-items-center border border-light-subtle p-2 mb-2">
-                    <div>
-                        <p className='mb-1'>Información cocción:</p>
-                        {
-                            isLoading ? (
-                                <p>Cargando...</p>
-                            ) : coccionEnCurso ? (
-                                <div className='d-flex gap-4'>
-                                    <p className='mb-0'><strong> Horno: </strong> {coccionEnCurso.prefijo} {coccionEnCurso.nombre_horno}</p>
-                                    <p className='mb-0'><strong> Fecha: </strong>  {coccionEnCurso.fecha_encendido}</p>
-                                    <p className='mb-0'><strong>Estado: </strong> {coccionEnCurso.estado}</p>
-                                </div>
-                            ) : (
-                                <span
-                                    className='d-flex justify-content-center text-danger'
-                                >
-                                    No se ha registrado una cocción en H2.
+        <div className="container">
 
-                                </span>
-                            )}
+            {/* Snackbar para alerts */}
+            <Snackbar
+                open={showAlert}
+                autoHideDuration={3000}
+                onClose={() => setShowAlert(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert severity={alertSeverity} onClose={() => setShowAlert(false)}>
+                    {alertMessage}
+                </Alert>
+            </Snackbar>
 
-                    </div>
-                    <div>
-                        {/* Mostrar solo si coccionEnCurso está definido */}
-                        {coccionEnCurso && (
-                            <>
-                                {coccionEnCurso.humeada === 0 && coccionEnCurso.quema === 0 && (
+            <div className="row">
+                <div className="col-md-6">
+                    <h4>Cocciones Sin Iniciar</h4>
+                    <div className="card">
+                        {coccionesSinIniciar.length === 0 ? (
+                            <p className='mb-0 p-2 text-center text-danger'>No hay cocciones registradas.</p>
+                        ) : (
+                            coccionesSinIniciar.map(coccion => (
+                                <div className="card-body d-flex justify-content-between" key={coccion.id_coccion}>
+                                    <div>
+                                    <p className='mb-0'><strong>Cocción ID: </strong>{coccion.id_coccion}</p>
+                                    <p className="mb-0"><strong>Fecha de encendido: </strong>{formatFecha(coccion.fecha_encendido)}</p>
+                                    </div>
+                                    
+                                    <div>
+
                                     <button
                                         className="btn btn-primary"
-                                        onClick={() => actualizarEstadoCoccion('humeada', 1)}
+                                        onClick={() => handleIniciarCoccion(coccion.id_coccion)}
                                     >
-                                        Iniciar Humeada
+                                        Iniciar
                                     </button>
-                                )}
-                                {coccionEnCurso.humeada === 1 && coccionEnCurso.quema === 0 && (
-                                    <button
-                                        className="btn btn-warning ms-2"
-                                        onClick={() => actualizarEstadoCoccion('quema', 1)}
-                                    >
-                                        Iniciar Quema
-                                    </button>
-                                )}
-                                {coccionEnCurso.humeada === 1 && coccionEnCurso.quema === 1 && (
-                                    <button
-                                        className="btn btn-danger ms-2"
-                                        onClick={finalizarCoccion}
-                                    >
-                                        Finalizar Cocción
-                                    </button>
-                                )}
-                            </>
+                                    </div>
+                                </div>
+                            ))
                         )}
-                        {/* Mensaje para cuando no hay cocción en curso */}
-                        {!coccionEnCurso && <p>No hay cocción en curso.</p>}
                     </div>
-
                 </div>
 
-
-                {showMonitor && coccionEnCurso && (
-                    <div id="wrapper_monitor" className='d-flex gap-2'>
-
-                        <div className='wrapper_cards d-flex flex-column gap-2'>
-                            {coccionEnCurso?.operadores?.filter((operador) =>
-                                // Si humeada = 1 y quema = 0, mostrar solo operadores Humeador
-                                (coccionEnCurso.humeada === 1 && coccionEnCurso.quema === 0 && operador.nombre_cargo === 'Humeador') ||
-                                // Si humeada = 1 y quema = 1, mostrar solo operadores Quemador
-                                (coccionEnCurso.humeada === 1 && coccionEnCurso.quema === 1 && operador.nombre_cargo === 'Quemador')
-                            )?.map((operador, index) => (
-                                <div key={index} className="card">
-                                    <div className="card-body text-center">
-                                        <h5 className="card-title mb-0">{operador.nombre_operador}</h5>
-                                        <p className="card-text mb-0">{operador.nombre_cargo}</p>
-                                        <p className='my-0 text-danger'><strong>0</strong></p>
-                                        <button className="btn btn-primary">Ingresar cantidad</button>
+                <div className="col-md-6">
+                    <h4>Cocciones Iniciadas</h4>
+                    <div className="card">
+                        {coccionesIniciadas.length === 0 ? (
+                            <p className='mb-0 p-2 text-center text-danger'>No se ha iniciado ninguna cocción.</p>
+                        ) : (
+                            coccionesIniciadas.map(coccion => (
+                                <div className="card-body d-flex justify-content-between" key={coccion.id_coccion}>
+                                    <div>
+                                    <p className='mb-0'><strong>Cocción ID: </strong>{coccion.id_coccion}</p>
+                                    <p className='mb-0'><strong>Fecha de encendido: </strong>{formatFecha(coccion.fecha_encendido)}</p>
+                                    </div>
+                                   
+                                    <div className='d-flex gap-1 mt-2'>
+                                        <button
+                                            className="btn btn-info"
+                                            onClick={() => handleVer(coccion.id_coccion)}
+                                        >
+                                            Ver
+                                        </button>
+                                        {coccion.quema === 0 ? (
+                                            <button
+                                                className="btn btn-warning"
+                                                onClick={() => handleIniciarQuema(coccion.id_coccion)}
+                                            >
+                                                Iniciar Quema
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => handleFinalizarCoccion(coccion.id_coccion)}
+                                            >
+                                                Finalizar
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
 
-                        <div className="wrapper_info_coccion d-flex flex-column gap-2 flex-grow-1">
-                            <div className=''>
-                                {/* Gráfico de temperatura */}
-                                <div className="card p-2">
-                                    <h5>Gráfico de temperatura</h5>
-                                    {registros.length > 0 ? (
-                                        <LineChart
-                                            dataset={registros}
-                                            xAxis={[
-                                                {
-                                                    dataKey: 'x',
-                                                    label: 'Tiempo (HH:mm:ss)',
-                                                    tickFormat: (tick) => tick.slice(0, 5), // Mostrar solo HH:mm
-                                                    scaleType: 'band', // Escala adecuada para tiempo
-                                                },
-                                            ]}
-                                            yAxis={[
-                                                {
-                                                    dataKey: 'y',
-                                                    label: 'Temperatura (°C)',
-                                                    domain: [0, 1200], // Rango fijo para temperatura
-                                                    tickInterval: 50,  // Intervalos de 50 en 50 grados
-                                                },
-                                            ]}
-                                            series={[
-                                                { dataKey: 'y', label: 'Temperatura' }, // Representa la temperatura
-                                            ]}
-                                            height={400}
-                                            width={700}
-                                            margin={{ left: 50, right: 50, top: 30, bottom: 50 }}
-                                            grid={{ vertical: true, horizontal: true }}
-                                        />
-                                    ) : (
-                                        <p>No hay sensor capturando datos.</p>
-                                    )}
-                                </div>
+             {/* Wrapper para mostrar información adicional */}
+             {showWrapper && (
+                <div className="row mt-4">
+                    <div className="col-12">
+                        <WrapperMonitor 
+                        idCoccion={currentCoccion} 
+                        personalId={personalId}
+                materialId={materialId}
+                historialConsumos={historialConsumos} />
+                    </div>
+                </div>
+            )}
 
-                                {/* Grafico barras */}
-                                <div className="card p-2">
-                                    <h5>Gráfico de barras</h5>
-                                    {registros.length > 0 ? (
-                                        <LineChart
-                                            dataset={registros}
-                                            xAxis={[
-                                                {
-                                                    dataKey: 'x',
-                                                    label: 'Tiempo (HH:mm:ss)',
-                                                    tickFormat: (tick) => tick.slice(0, 5), // Mostrar solo HH:mm
-                                                    scaleType: 'band', // Escala adecuada para tiempo
-                                                },
-                                            ]}
-                                            yAxis={[
-                                                {
-                                                    dataKey: 'y',
-                                                    label: 'Temperatura (°C)',
-                                                    domain: [0, 1200], // Rango fijo para temperatura
-                                                    tickInterval: 50,  // Intervalos de 50 en 50 grados
-                                                },
-                                            ]}
-                                            series={[
-                                                { dataKey: 'y', label: 'Temperatura' }, // Representa la temperatura
-                                            ]}
-                                            height={400}
-                                            width={700}
-                                            margin={{ left: 50, right: 50, top: 30, bottom: 50 }}
-                                            grid={{ vertical: true, horizontal: true }}
-                                        />
-                                    ) : (
-                                        <p>No hay datos.</p>
-                                    )}
-                                </div>
+            {/* Modal de confirmación */}
+            {showModal && (
+                <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1" role="dialog">
+                    <div className="modal-dialog" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header bg-danger text-white">
+                                <h5 className="modal-title">Confirmación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
                             </div>
-
-
-                            <div className='d-flex gap-2'>
-                                <div className='wrapper_sensores d-flex flex-column gap-2'>
-                                    <div className='card'>
-                                        <div className="card-body">
-                                            <p className='mb-0'>Termocupla 1</p>
-                                            <p className='mb-0'>756 °C</p>
-                                        </div>
-                                    </div>
-                                    <div className='card'>
-                                        <div className="card-body">
-                                            <p className='mb-0'>Termocupla 2</p>
-                                            <p className='mb-0'>756 °C</p>
-                                        </div>
-                                    </div>
-                                    <div className='card'>
-                                        <div className="card-body">
-                                            <p className='mb-0'>Termocupla 3</p>
-                                            <p className='mb-0'>756 °C</p>
-                                        </div>
-                                    </div>
-                                    <div className='card'>
-                                        <div className="card-body">
-                                            <p className='mb-0'>DHT22</p>
-                                            <p className='mb-0'>756 °C</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-
-
-                                <div className='d-flex flex-column gap-2'>
-                                    {/* Card Temperatura actual */}
-                                    <div className='card'>
-                                        <div className="card-body d-flex">
-                                            <img src={iconTemp} alt="" />
-                                            <div className='ms-2'>
-                                                <p className='mb-0'>Temperatura actual</p>
-                                                <p className='mb-0'><strong>600 °C</strong></p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Card Tiempo transcurrido */}
-                                    <div className='card'>
-                                        <div className="card-body d-flex">
-                                            <img src={iconTime} alt="" />
-                                            <div className='ms-2'>
-                                                <p className='mb-0'>Tiempo transcurrido</p>
-                                                <p className='mb-0'><strong>15h 35min</strong></p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Card Material utilizado */}
-                                    <div className='card'>
-                                        <div className="card-body d-flex">
-                                            <img src={iconSack} alt="" />
-                                            <div className='ms-2'>
-                                                <p className='mb-0'>Material Utilizado</p>
-                                                <p className='mb-0'><strong>600 °C</strong></p>}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
+                            <div className="modal-body">
+                                {modalType === "iniciarQuema" && <p>¿Está seguro de que desea iniciar la quema?</p>}
+                                {modalType === "finalizarCoccion" && <p>¿Está seguro de que desea finalizar esta cocción?</p>}
+                                {modalType === "iniciarCoccion" && <p>¿Está seguro de que desea iniciar la cocción?</p>}
+                            </div>
+                            <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                        Cancelar
+                    </button>
+                    {modalType === "iniciarQuema" && (
+                        <button type="button" className="btn btn-primary" onClick={confirmIniciarQuema}>
+                            Confirmar
+                        </button>
+                    )}
+                    {modalType === "finalizarCoccion" && (
+                        <button type="button" className="btn btn-primary" onClick={confirmFinalizarCoccion}>
+                            Confirmar
+                        </button>
+                    )}
+                    {modalType === "iniciarCoccion" && (  // Agregar este bloque para el botón de confirmar
+                        <button type="button" className="btn btn-primary" onClick={confirmIniciarCoccion}>
+                            Confirmar
+                        </button>
+                    )}
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
-                      
+                </div>
+            )}
         </div>
-    )
+    );
 }
 
 export default Monitor;
-
-

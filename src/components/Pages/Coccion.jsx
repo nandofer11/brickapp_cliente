@@ -1278,10 +1278,10 @@ const Coccion = () => {
                                         <h5 className="modal-title">Seleccionar Quemadores</h5>
                                     </div>
                                     <div className="modal-body">
-                                        <div>
+                                        <div className="list-group">
                                             {trabajadoresData.map((trabajador) => (
                                                 <div key={trabajador.id_personal}>
-                                                    <button onClick={() => manejarSeleccionQuemadores(trabajador)}>
+                                                    <button className='list-group-item' onClick={() => manejarSeleccionQuemadores(trabajador)}>
                                                         {trabajador.nombre_completo}
                                                     </button>
                                                 </div>
