@@ -39,6 +39,7 @@ const Monitor = () => {
     const fetchCocciones = async () => {
         try {
             const { data } = await axios.post(`${config.apiBaseUrl}coccion/encurso`, {}, configToken);
+            console.log("DATA:", data);
             const sinIniciar = data.filter(c => c.estado === 'En curso' && c.humeada === 0 && c.quema === 0);
             const iniciadas = data.filter(c => c.estado === 'En curso' && c.humeada === 1);
             setCoccionesSinIniciar(sinIniciar);
@@ -65,7 +66,7 @@ const Monitor = () => {
 
     const confirmIniciarCoccion = async () => {
         try {
-            await axios.put(`${config.apiBaseUrl}coccion/${selectedCoccion}/iniciarhumeada`, {}, configToken);
+            await axios.put(`${config.apiBaseUrl}coccion/${selectedCoccion.id_coccion}/iniciarhumeada`, {}, configToken);
             handleSnackbar('Cocción iniciada con éxito', 'success');
             setShowModal(false);
             fetchCocciones();
@@ -121,28 +122,17 @@ const Monitor = () => {
     const verOperadores = async (id) => {
         try {
         const { data } = await axios.get(`${config.apiBaseUrl}coccion/${id}/operadores`, configToken);
-        
-        // Encuentra la cocción correspondiente para determinar su estado
         const coccion = coccionesIniciadas.find(c => c.id_coccion === id);
-        
-        // Filtrar operadores según el estado de la cocción
         const filteredOperators = data.operadores.filter(op => {
-            // Si la cocción está en humeada
-            if (coccion.humeada === 1 && coccion.quema === 0) {
-                return op.nombre_cargo === 'Humeador'; // Solo mostrar Humeador
-            }
-            // Si la cocción está en quema
-            else if (coccion.humeada === 1 && coccion.quema === 1) {
-                return op.nombre_cargo === 'Quemador'; // Solo mostrar Quemador
-            }
-            return false; // Si no coincide con ninguna condición, no mostrar nada
+            if (coccion?.humeada === 1 && coccion?.quema === 0) return op.nombre_cargo === 'Humeador';
+            if (coccion?.humeada === 1 && coccion?.quema === 1) return op.nombre_cargo === 'Quemador';
+            return false;
         });
-
-        setWrapperData(filteredOperators); // Actualiza el estado con los operadores filtrados
-        setSelectedCoccion(id); // Actualiza la cocción seleccionada
-        setShowWrapperData(true); // Muestra el wrapperData con los operadores
+        setWrapperData(filteredOperators);
+        setSelectedCoccion(coccion); // Asegúrate de asignar el objeto
+        setShowWrapperData(true);
     } catch (error) {
-        handleSnackbar('Error al obtener operadores', 'error'); // Manejo de errores
+        handleSnackbar('Error al obtener operadores', 'error');
     }
     };
 
@@ -157,7 +147,7 @@ const Monitor = () => {
     // Función para obtener el historial de consumos
     const fetchConsumptionHistory = async (personalId) => {
         try {
-            const { data } = await axios.get(`${config.apiBaseUrl}coccion/${selectedCoccion}/${personalId}/material/consumosdematerial`, configToken);
+            const { data } = await axios.get(`${config.apiBaseUrl}coccion/${selectedCoccion.id_coccion}/${personalId}/material/consumosdematerial`, configToken);
             setConsumptionHistory(data);
         } catch (error) {
             handleSnackbar('Error al obtener historial de consumos', 'error');
@@ -165,34 +155,38 @@ const Monitor = () => {
     };
 
     const registerConsumption = async () => {
-    if (!consumptionAmount) {
-        handleSnackbar('Por favor, ingrese una cantidad válida', 'error');
+    if (!selectedCoccion.id_coccion || !selectedOperator.id_personal || !selectedCoccion.id_material) {
+        console.error("Faltan datos en selectedCoccion:", selectedCoccion);
         return;
     }
 
+    const payload = {
+        id_coccion: selectedCoccion.id_coccion, // Asegúrate de que `selectedCoccion` tenga esta propiedad
+        id_personal: selectedOperator.id_personal,
+        id_material: selectedCoccion.id_material,
+        cantidad_consumida: parseFloat(consumptionAmount), 
+    };
+
     try {
-        console.log("selectedCoccion.id_material", selectedCoccion.id_material);
-        console.log("selectedCoccion", selectedCoccion);
-        const payload = {
-            coccionId: selectedCoccion, // ID de la cocción
-            personalId: selectedOperator.id_personal, // ID del operador
-            materiales: [
-                {
-                    materialId: selectedCoccion.id_material, // ID del material de la cocción
-                    cantidadConsumida: parseInt(consumptionAmount, 10) // Asegúrate de enviar la cantidad como número
-                }
-            ]
-        };
+        const response = await axios.post(
+            `${config.apiBaseUrl}coccion/consumomaterial`,
+            payload,
+            configToken
+        );
+        console.log("Respuesta del servidor:", response.data);
 
-        // Realiza la solicitud POST para registrar el consumo
-        const { data } = await axios.post(`${config.apiBaseUrl}coccion/consumomaterial`, payload , configToken);
+        handleSnackbar('Consumo registrado exitosamente.', 'success');
 
-        handleSnackbar('Consumo registrado con éxito', 'success');
-        setConsumptionAmount(''); // Reiniciar la cantidad
-        setShowModalRegistroConsumo(false); // Cerrar el modal
-        await fetchConsumptionHistory(selectedOperator.id_personal); // Actualizar el historial de consumos
+         // Limpiar campos y cerrar el modal
+         setConsumptionAmount('');
+        setShowModalRegistroConsumo(false);
+
+        // Recargar el historial de consumos
+        await fetchConsumptionHistory(selectedOperator.id_personal);
+
     } catch (error) {
-        handleSnackbar('Error al registrar el consumo', 'error');
+        console.error("Error al registrar el consumo:", error);
+        handleSnackbar('Error al registrar el consumo.', 'error');
     }
 };
 
@@ -204,9 +198,6 @@ const Monitor = () => {
         }
     };
 
-    const toggleWrapperData = () => {
-        setShowWrapperData(!showWrapperData);
-    };
 
     return (
         <div className="container">
@@ -364,7 +355,7 @@ const Monitor = () => {
                             <h5 className="modal-title">
                                 Confirmar {modalType === 'iniciarCoccion' ? 'Iniciar Cocción' : modalType === 'iniciarQuema' ? 'Iniciar Quema' : 'Finalizar Cocción'}
                             </h5>
-                            <button onClick={() => setShowModal(false)} type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button onClick={() => setShowModal(false)} type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
                         </div>
                         <div className="modal-body">
