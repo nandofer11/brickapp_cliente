@@ -82,11 +82,10 @@ const Trabajadores = () => {
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevenir el envío del formulario
 
-        // Validar campos antes de proceder
         if (!validarCamposPersonal()) {
             return; // Si la validación falla, no continuar
         }
-
+    
         const trabajadorData = {
             dni,
             nombre_completo,
@@ -97,42 +96,32 @@ const Trabajadores = () => {
             fecha_ingreso,
             estado,
         };
-
-        console.log(trabajadorData);
-
+    
         try {
             let response;
-
+    
             if (isEditing) {
-                // Actualiza el trabajador
                 response = await axios.put(`${config.apiBaseUrl}personal/${idPersonalSeleccionado}`, trabajadorData, configToken);
             } else {
-                // Crea un nuevo trabajador
                 response = await axios.post(`${config.apiBaseUrl}personal/`, trabajadorData, configToken);
             }
-
+    
             if (response.data && response.data.message) {
-                // Mostrar mensaje de éxito
                 setAlertMessage(isEditing ? 'Trabajador actualizado con éxito.' : 'Trabajador agregado exitosamente.');
                 setAlertSeverity('success'); // Mensaje de éxito
-                setShowAlert(true); // Mostrar la alerta
+                setShowAlert(true);
             }
-
-            // Actualizar tabla después de la operación
-            await fetchPersonalData();
-
-            // Cerrar el modal primero, luego mostrar el alert
+    
+            await fetchPersonalData(); // Actualizar la tabla
             const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalTrabajador'));
-            modal.hide();
-
-            // Limpiar los campos después de la operación
-            resetForm();
-
-
+            modal.hide(); // Cerrar el modal
+            resetForm(); // Limpiar los campos
+    
         } catch (error) {
-            // Mostrar alerta de error
-            setAlertMessage('Error: No se ha podido agregar o actualizar el trabajador. ' + error);
-            setAlertSeverity('error'); // Mensaje de éxito
+            // Manejar mensajes de error específicos del servidor
+            const errorMessage = error.response?.data?.message || 'Error desconocido. Intenta nuevamente.';
+            setAlertMessage(errorMessage);
+            setAlertSeverity('error'); // Mensaje de error
             setShowAlert(true);
         }
     };

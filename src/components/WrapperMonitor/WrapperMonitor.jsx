@@ -77,29 +77,29 @@ const WrapperMonitor = ({ idCoccion, personalId, materialId, historialConsumos }
               fetchData();
 
         // Si operador y material están seleccionados, obtener consumos
-        if (operadorSeleccionado && selectedMaterial) {
-            const personalId = operadorSeleccionado.id_personal;
-            const materialId = selectedMaterial;
+        // if (operadorSeleccionado && selectedMaterial) {
+        //     const personalId = operadorSeleccionado.id_personal;
+        //     const materialId = selectedMaterial;
 
-            console.log("Solicitando consumos para:", personalId, materialId);
+        //     console.log("Solicitando consumos para:", personalId, materialId);
 
-            axios
-                .get(
-                    `${config.apiBaseUrl}coccion/${idCoccion}/${personalId}/${materialId}/consumosdematerial`,
-                    configToken
-                )
-                .then(response => {
-                    console.log("Respuesta de consumos:", response.data);
-                    setHistorialConsumos(response.data); // Guardamos los consumos en el estado
-                    // Calcular el total consumido directamente después de obtener los datos
-                    const totalConsumido = response.data.reduce((acc, consumo) => acc + (consumo.cantidad_consumida || 0), 0);
-                    setMaterialConsumido(totalConsumido); // Actualizamos el total consumido
-                })
-                .catch(error => {
-                    console.error('Error al cargar historial de consumos:', error);
-                    setHistorialConsumos([]); // Si hay error, vaciamos el historial
-                });
-        }
+        //     axios
+        //         .get(
+        //             `${config.apiBaseUrl}coccion/${idCoccion}/${personalId}/${materialId}/consumosdematerial`,
+        //             configToken
+        //         )
+        //         .then(response => {
+        //             console.log("Respuesta de consumos:", response.data);
+        //             setHistorialConsumos(response.data); // Guardamos los consumos en el estado
+        //             // Calcular el total consumido directamente después de obtener los datos
+        //             const totalConsumido = response.data.reduce((acc, consumo) => acc + (consumo.cantidad_consumida || 0), 0);
+        //             setMaterialConsumido(totalConsumido); // Actualizamos el total consumido
+        //         })
+        //         .catch(error => {
+        //             console.error('Error al cargar historial de consumos:', error);
+        //             setHistorialConsumos([]); // Si hay error, vaciamos el historial
+        //         });
+        // }
     }, [idCoccion, operadorSeleccionado, selectedMaterial, historialConsumos]); // Asegúrate de que este useEffect dependa de los elementos correctos
 
 
