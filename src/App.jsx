@@ -27,7 +27,17 @@ function App() {
           <Route path="/registro" element={<Registro />} />
 
           {/* Rutas protegidas envueltas en el componente FullLayout */}
-          <Route element={<ProtectedRoute />}>
+          {/* <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<FullLayout />}>
+              <Route path="inicio" element={<Inicio />} />
+              <Route path="monitor" element={<Monitor />} />
+              <Route path="coccion" element={<Coccion />} />
+              <Route path="personal" element={<Personal />} />
+              <Route path="inventario" element={<Inventario />} />
+              <Route path="reportes" element={<Reportes />} />
+            </Route>
+          </Route> */}
+          <Route >
             <Route path="/admin" element={<FullLayout />}>
               <Route path="inicio" element={<Inicio />} />
               <Route path="monitor" element={<Monitor />} />
